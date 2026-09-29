@@ -74,7 +74,7 @@ export interface ApiGasto {
   pedidos: { nombre: string } | null;
   comprobantes: { id: number; numero: string | null; tipo: string; creado_en?: string }[];
   pagos: { id: number; medio: string; numero_operacion: string | null; creado_en?: string }[];
-  evidencias: { id: number; tipo: string; origen: string; storage_path: string; url?: string | null; creado_en?: string }[];
+  evidencias: { id: number; tipo: string; origen: string; storage_path: string; url?: string | null; creado_en?: string; huella?: string | null }[];
 }
 
 export interface ApiResumen {

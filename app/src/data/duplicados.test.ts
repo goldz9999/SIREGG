@@ -32,4 +32,12 @@ describe('compararDuplicado', () => {
     expect(c.motivo).toBe('Misma fecha y monto que el gasto #1 de Adrian');
     expect(c.nivel).toBe('media');
   });
+  it('misma imagen (la foto reenviada) tiene prioridad en el motivo', () => {
+    const h = 'a'.repeat(64);
+    const o = { ...base, ev: [{ k: 'Factura' as const, file: '000014', url: 'x', huella: h }] };
+    const n = { ...base, id: '5', user: 'Miguel', ev: [{ k: 'Factura' as const, file: '000014', url: 'y', huella: 'a'.repeat(63) + 'b' }] };
+    const c = compararDuplicado(n, o);
+    expect(c.motivo).toBe('Misma imagen (foto de la factura) que el gasto #1 de Adrian');
+    expect(c.coinciden[0]).toBe('Misma imagen');
+  });
 });

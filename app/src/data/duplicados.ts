@@ -14,6 +14,25 @@ export interface Comparacion {
 }
 
 const TOLERANCIA = 0.5;
+// Igual que el backend (UMBRAL_HUELLA): hasta 12 bits distintos de 256 es la misma imagen.
+const UMBRAL_HUELLA = 12;
+function distanciaHuella(a?: string | null, b?: string | null): number {
+  if (!a || !b || a.length !== b.length) return Infinity;
+  let d = 0;
+  for (let i = 0; i < a.length; i++) {
+    let x = parseInt(a[i], 16) ^ parseInt(b[i], 16);
+    while (x) { d += x & 1; x >>= 1; }
+  }
+  return d;
+}
+/** La misma imagen está en los dos gastos: devuelve qué es (factura, pago…) o null. */
+function imagenComun(n: Expense, o: Expense): Evidence | null {
+  for (const f of n.ev) {
+    if (!f.huella) continue;
+    if (o.ev.some((g) => distanciaHuella(f.huella, g.huella) <= UMBRAL_HUELLA)) return f;
+  }
+  return null;
+}
 const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
 export const esComprobante = (f: Evidence) => f.k === 'Factura' || f.k === 'Boleta';
@@ -31,6 +50,7 @@ export function compararDuplicado(n: Expense, o: Expense): Comparacion {
   const mismoRuc = !!n.ruc && !!o.ruc && n.ruc === o.ruc;
   const numComun = numeros(n).find((x) => numeros(o).includes(x));
   const mismaOperacion = !!n.op && !!o.op && n.op === o.op;
+  const imagen = imagenComun(n, o);
 
   const cmp = (a: string, b: string, igual: boolean): boolean | null => (!a && !b ? null : igual);
   const filas: FilaComparacion[] = [
@@ -51,14 +71,17 @@ export function compararDuplicado(n: Expense, o: Expense): Comparacion {
     Monto: (f) => f.igual ? 'Monto ' + f.nuevo : 'Monto: ' + f.nuevo + ' / ' + f.existente,
     'Medio de pago': (f) => f.igual ? 'Medio de pago' : 'Medio: ' + (n.pay || 'sin pago') + ' / ' + (o.pay || 'sin pago'),
   };
-  const coinciden = filas.filter((f) => f.igual === true).map((f) => etiqueta[f.campo]?.(f) ?? f.campo);
+  const coinciden = [...(imagen ? ['Misma imagen'] : []), ...filas.filter((f) => f.igual === true).map((f) => etiqueta[f.campo]?.(f) ?? f.campo)];
   const difieren = filas.filter((f) => f.igual === false).map((f) => etiqueta[f.campo]?.(f) ?? f.campo);
 
   const quien = o.user ? ' de ' + o.user : '';
   const tipoComp = n.ev.find(esComprobante)?.k.toLowerCase() ?? 'factura';
   let motivo: string;
   let nivel: 'alta' | 'media' = 'alta';
-  if (mismaOperacion) motivo = 'Misma operación de ' + (n.pay || 'pago') + ' ' + n.op + ' que el gasto #' + o.id + quien;
+  if (imagen) {
+    const que = esComprobante(imagen) ? 'foto de la ' + imagen.k.toLowerCase() : esPago(imagen) ? 'captura del pago' : 'foto';
+    motivo = 'Misma imagen (' + que + ') que el gasto #' + o.id + quien;
+  } else if (mismaOperacion) motivo = 'Misma operación de ' + (n.pay || 'pago') + ' ' + n.op + ' que el gasto #' + o.id + quien;
   else if (numComun && (mismoRuc || mismoProveedor)) motivo = 'Misma ' + tipoComp + ' ' + numComun + ' y ' + (mismoRuc ? 'RUC' : 'proveedor') + ' que el gasto #' + o.id + quien;
   else if (mismaFecha && mismoMonto) {
     motivo = 'Misma fecha y monto que el gasto #' + o.id + quien;

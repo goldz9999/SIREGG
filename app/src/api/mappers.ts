@@ -75,8 +75,8 @@ function mapEvidence(g: ApiGasto): Evidence[] {
       const dm = mejor ? Math.abs(t - mejor.t) : Infinity;
       if (d < dm - 50 || (Math.abs(d - dm) <= 50 && r.comprobante && !mejor?.comprobante)) mejor = r;
     }
-    if (mejor && e.url) mejor.ev.url = e.url;
-    else sueltas.push({ k: 'Foto', file: e.storage_path, url: e.url ?? null });
+    if (mejor && e.url) { mejor.ev.url = e.url; if (e.huella) mejor.ev.huella = e.huella; }
+    else sueltas.push({ k: 'Foto', file: e.storage_path, url: e.url ?? null, ...(e.huella ? { huella: e.huella } : {}) });
   }
   return [...registros.filter((r) => r.comprobante).map((r) => r.ev), ...registros.filter((r) => !r.comprobante).map((r) => r.ev), ...sueltas, ...audios];
 }

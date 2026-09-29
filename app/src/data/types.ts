@@ -30,6 +30,8 @@ export interface Evidence {
   file: string;
   /** URL firmada de la imagen real (solo datos del backend). */
   url?: string | null;
+  /** Huella perceptual de la imagen (para reconocer la misma foto en otro gasto). */
+  huella?: string | null;
 }
 
 export interface Expense {
