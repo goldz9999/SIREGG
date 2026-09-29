@@ -19,7 +19,7 @@ interface AppState {
   setTheme: (t: ThemePref) => void;
   user: SessionUser;
   logout: () => void;
-  /** Empresas del usuario más el espacio "Gastos personales" (al final). */
+  /** Empresas del usuario más el espacio "Gastos personales" (al final, solo si puede registrarlos). */
   companies: Company[];
   co: Company;
   /** True en el espacio "Gastos personales". */
@@ -59,7 +59,7 @@ function readStored(): { theme?: ThemePref; coId?: string; page?: PageId } {
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const auth = useAuth();
   const user = auth.user!;
-  const companies = useMemo(() => [...auth.companies, PERSONAL], [auth.companies]);
+  const companies = useMemo(() => (user.canPersonal ? [...auth.companies, PERSONAL] : auth.companies), [auth.companies, user.canPersonal]);
   const stored = useRef(readStored()).current;
   const [theme, setThemeState] = useState<ThemePref>(stored.theme || 'light');
   const [sysDark, setSysDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);

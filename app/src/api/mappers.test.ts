@@ -86,18 +86,21 @@ describe('empresas y roles', () => {
 
 describe('mapMember', () => {
   const u = (over: Partial<ApiUsuarioLista> = {}): ApiUsuarioLista => ({
-    id: 4, nombre: 'Ana Quispe', email: 'ana@x.pe', rol: 'empleado', activo: true, tiene_password: true,
+    id: 4, nombre: 'Ana Quispe', email: 'ana@x.pe', rol: 'empleado', activo: true, tiene_password: true, puede_registrar_personal: false,
     empresas: [{ empresa_id: 7, rol: 'contador' }], ...over,
   });
 
   it('con contraseña y activo: aceptada y activa, con el rol de la empresa pedida', () => {
-    expect(mapMember(u(), 7, 99)).toEqual({ id: 4, name: 'Ana Quispe', email: 'ana@x.pe', role: 'Contador', inv: 'Aceptada', acc: 'Activa', me: false });
+    expect(mapMember(u(), 7, 99)).toEqual({ id: 4, name: 'Ana Quispe', email: 'ana@x.pe', role: 'Contador', inv: 'Aceptada', acc: 'Activa', me: false, personal: false });
   });
   it('sin contraseña: pendiente y sin cuenta', () => {
     expect(mapMember(u({ tiene_password: false }), 7, 99)).toMatchObject({ inv: 'Pendiente', acc: '—' });
   });
   it('desactivado: aceptada y suspendida', () => {
     expect(mapMember(u({ activo: false }), 7, 99)).toMatchObject({ inv: 'Aceptada', acc: 'Suspendida' });
+  });
+  it('lleva el permiso de gastos personales', () => {
+    expect(mapMember(u({ puede_registrar_personal: true }), 7, 99).personal).toBe(true);
   });
   it('marca al usuario actual', () => {
     expect(mapMember(u(), 7, 4).me).toBe(true);

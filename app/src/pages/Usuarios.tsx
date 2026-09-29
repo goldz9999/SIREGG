@@ -9,7 +9,7 @@ import { initials } from '../lib/format';
 import { useViewport } from '../hooks/useViewport';
 import { useApp } from '../state/AppState';
 
-interface NewMember { name: string; email: string; password: string; role: Role }
+interface NewMember { name: string; email: string; password: string; role: Role; personal: boolean }
 
 export default function Usuarios() {
   const { co, showToast, user } = useApp();
@@ -35,7 +35,7 @@ export default function Usuarios() {
   // Only an owner can grant or change the owner role.
   const roleChoices = isOwner ? ROLES : ROLES.slice(1);
   const members: Member[] = apiMembers;
-  const update = async (m: Member, body: { rol_empresa?: RolEmpresa; activo?: boolean }, ok: string) => {
+  const update = async (m: Member, body: { rol_empresa?: RolEmpresa; activo?: boolean; puede_registrar_personal?: boolean }, ok: string) => {
     if (m.id === undefined) return;
     try {
       await actualizarUsuario(m.id, Number(co.id), body);
@@ -60,7 +60,10 @@ export default function Usuarios() {
     if (members.some((m) => m.email.toLowerCase() === em.toLowerCase())) { showToast('Ese correo ya es miembro.', 'ph-warning-circle'); return; }
     setBusy(true);
     try {
-      await crearUsuario(Number(co.id), { nombre: name, email: em, password: invite.password, rol_empresa: toRolEmpresa(invite.role) });
+      await crearUsuario(Number(co.id), {
+        nombre: name, email: em, password: invite.password, rol_empresa: toRolEmpresa(invite.role),
+        ...(isOwner && invite.personal && invite.role !== 'Propietario' ? { puede_registrar_personal: true } : {}),
+      });
       setInvite(null);
       setTick((t) => t + 1);
       showToast('Usuario ' + name + ' creado. Comparte la contraseña temporal con la persona.', 'ph-user-plus');
@@ -76,7 +79,7 @@ export default function Usuarios() {
       <div className="row wrap" style={{ gap: 'var(--space-2)' }}>
         <span style={{ fontSize: 14, color: 'var(--color-neutral-800)' }}>{members.length} miembros en {co.name}</span>
         <span className="grow" />
-        {canManage && <button className="btn btn-primary" onClick={() => setInvite({ name: '', email: '', password: '', role: 'Empleado' })}><Icon n="ph-user-plus" /> Agregar miembro</button>}
+        {canManage && <button className="btn btn-primary" onClick={() => setInvite({ name: '', email: '', password: '', role: 'Empleado', personal: false })}><Icon n="ph-user-plus" /> Agregar miembro</button>}
       </div>
       <div className="panel" style={{ gap: 0, padding: '4px 20px' }}>
         {members.map((m) => {
@@ -99,6 +102,18 @@ export default function Usuarios() {
               <span className="row wrap" style={{ gap: 'var(--space-2)', gridColumn: cellCol }}>
                 <span className={invCls}>{m.inv}</span>
                 <span className={accCls}>{m.acc === '—' ? 'Sin cuenta' : m.acc}</span>
+                {m.role === 'Propietario' ? (
+                  <span className="tag tag-outline" title="El propietario siempre puede registrar gastos personales">Personales: siempre</span>
+                ) : isOwner && !m.me ? (
+                  <label className="row" style={{ gap: 6, fontSize: 13, cursor: 'pointer' }} title="Solo el propietario decide quién registra gastos personales">
+                    <input type="checkbox" checked={m.personal}
+                      onChange={(ev) => update(m, { puede_registrar_personal: ev.target.checked },
+                        ev.target.checked ? m.name + ' ya puede registrar gastos personales.' : m.name + ' ya no puede registrar gastos personales.')} />
+                    Gastos personales
+                  </label>
+                ) : (
+                  <span className={m.personal ? 'tag tag-outline' : 'tag tag-neutral'}>{m.personal ? 'Personales: sí' : 'Personales: no'}</span>
+                )}
               </span>
               {editable ? (
                 <Select label="Rol" value={m.role} options={roleChoices.map((v) => ({ v }))} style={{ gridColumn: cellCol }}
@@ -139,7 +154,13 @@ export default function Usuarios() {
             <label>Rol</label>
             <Select label="Rol" value={invite.role} options={roleChoices.map((v) => ({ v }))} onChange={(v) => setInvite({ ...invite, role: v as Role })} />
           </div>
-          <span className="muted" style={{ fontSize: 13 }}>No se envía ningún correo: comparte la contraseña temporal con la persona.</span>
+          {isOwner && invite.role !== 'Propietario' && (
+            <label className="row" style={{ gap: 8, fontSize: 14, cursor: 'pointer' }}>
+              <input type="checkbox" checked={invite.personal} onChange={(e) => setInvite({ ...invite, personal: e.target.checked })} />
+              Puede registrar gastos personales
+            </label>
+          )}
+          <span className="muted" style={{ fontSize: 13 }}>No se envía ningún correo: comparte la contraseña temporal con la persona. {isOwner ? '' : 'Solo el propietario decide quién registra gastos personales.'}</span>
           <div className="dialog-actions">
             <button className="btn btn-ghost" onClick={() => setInvite(null)}>Cancelar</button>
             <button className="btn btn-primary" onClick={sendInvite} disabled={busy}>{busy ? 'Creando…' : 'Crear usuario'}</button>

@@ -21,6 +21,8 @@ export interface ApiUsuarioLista {
   rol: string;
   activo: boolean;
   tiene_password: boolean;
+  /** Permiso efectivo: el propietario siempre puede; el resto si un propietario lo activó. */
+  puede_registrar_personal: boolean;
   empresas: { empresa_id: number; rol: RolEmpresa }[];
 }
 

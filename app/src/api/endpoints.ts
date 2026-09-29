@@ -30,7 +30,7 @@ export const confirmarDuplicado = (id: number, empresaId: number) => accion(id, 
 export const descartarDuplicado = (id: number, empresaId: number) => accion(id, empresaId, 'descartar-duplicado');
 export const rechazar = (id: number, empresaId: number) => accion(id, empresaId, 'rechazar');
 
-export interface NuevoUsuario { nombre: string; email: string; password: string; rol_empresa: RolEmpresa }
+export interface NuevoUsuario { nombre: string; email: string; password: string; rol_empresa: RolEmpresa; puede_registrar_personal?: boolean }
 export const listUsuarios = (empresaId: number) => api<ApiUsuarioLista[]>('/usuarios', { query: { empresa_id: empresaId } });
 export const crearUsuario = (empresaId: number, u: NuevoUsuario) =>
   api<ApiUsuarioLista>('/usuarios', { method: 'POST', body: { ...u, empresa_ids: [empresaId] }, query: { empresa_id: empresaId } });
@@ -52,7 +52,7 @@ export const renombrarCategoria = (id: number, empresaId: number, nombre: string
 export const eliminarCategoria = (id: number, empresaId: number) =>
   api<unknown>('/categorias/' + id, { method: 'DELETE', query: { empresa_id: empresaId } });
 
-export const actualizarUsuario = (id: number, empresaId: number, body: { rol_empresa?: RolEmpresa; activo?: boolean }) =>
+export const actualizarUsuario = (id: number, empresaId: number, body: { rol_empresa?: RolEmpresa; activo?: boolean; puede_registrar_personal?: boolean }) =>
   api<ApiUsuarioLista>('/usuarios/' + id, { method: 'PATCH', body, query: { empresa_id: empresaId } });
 
 export interface DatosEmpresa { nombre?: string; ruc?: string | null; direccion?: string | null; moneda?: Moneda }

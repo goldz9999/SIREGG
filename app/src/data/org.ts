@@ -35,7 +35,7 @@ export const PERMS: Record<Role, PageId[]> = {
 export const ROLES: Role[] = ['Propietario', 'Administrador', 'Supervisor', 'Contador', 'Empleado'];
 
 export const ROLE_DOCS: [Role, string][] = [
-  ['Propietario', 'Control total de la organización: miembros, categorías, proyectos y configuración.'],
+  ['Propietario', 'Control total de la organización: miembros, categorías, proyectos y configuración. Decide quién puede registrar gastos personales.'],
   ['Administrador', 'Gestiona miembros, categorías, proyectos y configuración.'],
   ['Supervisor', 'Revisa gastos y gestiona proyectos y pedidos.'],
   ['Contador', 'Consulta gastos, comprobantes y reportes; gestiona categorías y proveedores.'],

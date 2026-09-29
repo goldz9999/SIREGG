@@ -55,6 +55,8 @@ export interface Expense {
   createdAt?: string;
   /** Empresa del gasto (en "Gastos personales" se mezclan varias). */
   empresaId?: number | null;
+  /** Usuario que registró el gasto. */
+  userId?: number | null;
 }
 
 export interface Member {
@@ -65,6 +67,8 @@ export interface Member {
   inv: 'Aceptada' | 'Pendiente' | 'Expirada';
   acc: 'Activa' | 'Suspendida' | '—';
   me?: boolean;
+  /** Puede registrar gastos personales (lo decide el propietario). */
+  personal: boolean;
 }
 
 export interface Notification {

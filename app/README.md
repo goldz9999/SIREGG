@@ -24,7 +24,7 @@ npm run build      # typecheck + build de producción en dist/
 ### Puesta en marcha con Supabase `SIREGG`
 
 La base del proyecto Supabase **SIREGG** (`bqcfsgdlhzjstzbfbner`) ya tiene aplicadas
-`0001_esquema_base.sql`, `0002_rol_por_empresa.sql` y `0003_datos_organizacion.sql` de
+`0001_esquema_base.sql` a `0004_permiso_gastos_personales.sql` de
 `facturas-app/backend/supabase/migrations/`, el bucket privado `Facturas` y el público `logos-empresas`.
 
 1. En `facturas-app/backend/.env` (copia de `.env.example`):
@@ -50,6 +50,7 @@ VITE_API_URL=http://localhost:3000
 - Los avisos de la campana se calculan con los conteos reales (`/gastos/conteos`).
 - Desde el detalle de un gasto se corrigen proveedor, RUC y medio de pago. El proveedor se busca por nombre en la empresa del gasto (o se crea); el RUC es del proveedor, así que corregirlo vale para todos sus gastos, y no se acepta un RUC que ya tiene otro proveedor. El medio de pago corrige el primer pago del gasto o crea uno.
 - La moneda de la organización (soles o dólares) cambia el símbolo con que se muestran los montos.
+- **Quién registra gastos personales lo decide el propietario** (casilla "Gastos personales" en Usuarios, también al crear un miembro). El propietario siempre puede; el resto de roles no, salvo que el propietario lo active. Sin permiso no aparece el espacio Gastos personales ni la opción "Personal" en sus gastos, y el backend lo hace cumplir (Telegram, alta y edición de gastos).
 - **Gastos personales** aparece en el selector, debajo de las organizaciones. No es una empresa: muestra tus gastos marcados como personales en todas tus organizaciones (`?ambito=personal`). Cada acción se guarda en la empresa del gasto. Proveedores, categorías y proyectos no aparecen en este espacio porque cada empresa tiene los suyos.
 - Un **propietario** (en al menos una organización) ve todas las organizaciones activas y puede cambiar a cualquiera; en las que no es miembro entra como propietario.
 - Los permisos por rol viven en el backend (`usuario_empresas.rol`): categorías y proveedores → propietario, administrador y contador; proyectos/pedidos → propietario, administrador y supervisor; miembros y nombre de la organización → propietario y administrador.

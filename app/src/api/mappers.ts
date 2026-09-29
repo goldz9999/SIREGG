@@ -82,6 +82,7 @@ export function mapGasto(g: ApiGasto): Expense {
     conf: g.confianza ?? undefined,
     createdAt: g.creado_en,
     empresaId: g.empresa_id,
+    userId: g.usuario_id,
   };
 }
 
@@ -97,5 +98,6 @@ export function mapMember(u: ApiUsuarioLista, empresaId: number, meId: number): 
     inv: u.tiene_password ? 'Aceptada' : 'Pendiente',
     acc: !u.tiene_password ? '—' : u.activo ? 'Activa' : 'Suspendida',
     me: u.id === meId,
+    personal: u.puede_registrar_personal,
   };
 }

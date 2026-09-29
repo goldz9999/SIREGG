@@ -43,13 +43,16 @@ export default function ExpenseDetail({ expense: e, done, onDone, onResolved, on
   onBack?: () => void;
   primaryRef?: MutableRefObject<(() => void) | null>;
 }) {
-  const { co, companies, personal, expenses, patchExpense, showToast, categories, pedidos } = useApp();
+  const { co, companies, personal, user, expenses, patchExpense, showToast, categories, pedidos } = useApp();
   const [draft, setDraft] = useState<Draft | null>(null);
   const [preview, setPreview] = useState<number | null>(null);
   const [newProj, setNewProj] = useState(false);
 
   // Categorías de la empresa del gasto (en "Gastos personales" se cargan las de todas).
   const cats = uniq([...categories.filter((c) => e.empresaId == null || c.empresa_id === e.empresaId).map((c) => c.nombre), e.cat]);
+  // "Personal" solo si quien registró el gasto puede tener gastos personales (el backend lo valida;
+  // aquí solo se sabe del propio usuario).
+  const typeOpts: ExpenseType[] = e.type === 'Personal' || e.userId !== user.id || user.canPersonal ? ['Empresarial', 'Personal'] : ['Empresarial'];
   const payOpts = uniq([...(e.pay ? [] : [NO_PAY]), ...PAYS, ...(e.pay ? [e.pay] : [])]);
   const orgName = personal && e.empresaId != null ? companies.find((c) => c.id === String(e.empresaId))?.name : undefined;
   const projOpts = uniq([NO_PROJECT, ...pedidos.map((p) => p.nombre), ...(e.proj ? [e.proj] : [])]);
@@ -213,7 +216,7 @@ export default function ExpenseDetail({ expense: e, done, onDone, onResolved, on
               {textInput('Proveedor', 'prov')}
               {textInput('RUC del proveedor', 'ruc', 1, { inputMode: 'numeric', maxLength: 11, placeholder: '11 dígitos' })}
               {selInput('Categoría', 'cat', cats)}
-              {selInput('Tipo', 'type', ['Empresarial', 'Personal'])}
+              {selInput('Tipo', 'type', typeOpts)}
               {pedidos.length > 0 && selInput('Proyecto o pedido', 'proj', projOpts, 2)}
             </div>
           )}
