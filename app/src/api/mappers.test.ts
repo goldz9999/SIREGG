@@ -101,7 +101,7 @@ describe('mapMember', () => {
   });
 
   it('con contraseña y activo: aceptada y activa, con el rol de la empresa pedida', () => {
-    expect(mapMember(u(), 7, 99)).toEqual({ id: 4, name: 'Ana Quispe', email: 'ana@x.pe', role: 'Contador', inv: 'Aceptada', acc: 'Activa', me: false, personal: false, telegram: false });
+    expect(mapMember(u(), 7, 99)).toEqual({ id: 4, name: 'Ana Quispe', email: 'ana@x.pe', role: 'Contador', inv: 'Aceptada', acc: 'Activa', me: false, personal: false, telegram: false, empresaIds: [7] });
   });
   it('sin contraseña: pendiente y sin cuenta', () => {
     expect(mapMember(u({ tiene_password: false }), 7, 99)).toMatchObject({ inv: 'Pendiente', acc: '—' });

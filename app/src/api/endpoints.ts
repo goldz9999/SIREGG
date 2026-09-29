@@ -39,10 +39,13 @@ export const confirmarDuplicado = (id: number, empresaId: number) => accion(id, 
 export const descartarDuplicado = (id: number, empresaId: number) => accion(id, empresaId, 'descartar-duplicado');
 export const rechazar = (id: number, empresaId: number) => accion(id, empresaId, 'rechazar');
 
-export interface NuevoUsuario { nombre: string; email: string; password: string; rol_empresa: RolEmpresa; puede_registrar_personal?: boolean }
+export interface NuevoUsuario { nombre: string; email: string; password: string; rol_empresa: RolEmpresa; puede_registrar_personal?: boolean; empresa_ids?: number[] }
 export const listUsuarios = (empresaId: number) => api<ApiUsuarioLista[]>('/usuarios', { query: { empresa_id: empresaId } });
 export const crearUsuario = (empresaId: number, u: NuevoUsuario) =>
-  api<ApiUsuarioLista>('/usuarios', { method: 'POST', body: { ...u, empresa_ids: [empresaId] }, query: { empresa_id: empresaId } });
+  api<ApiUsuarioLista>('/usuarios', { method: 'POST', body: { ...u, empresa_ids: u.empresa_ids?.length ? u.empresa_ids : [empresaId] }, query: { empresa_id: empresaId } });
+/** A qué empresas pertenece un miembro (solo cambia las que quien edita gestiona). */
+export const empresasUsuario = (id: number, empresaId: number, empresaIds: number[]) =>
+  api<ApiUsuarioLista>('/usuarios/' + id + '/empresas', { method: 'PUT', body: { empresa_ids: empresaIds }, query: { empresa_id: empresaId } });
 
 // ── Proyectos/pedidos, proveedores, categorías, usuarios y empresa ──
 export interface NuevoPedido { nombre: string; cliente?: string; presupuesto?: number }
@@ -64,6 +67,9 @@ export const eliminarCategoria = (id: number, empresaId: number) =>
 export const actualizarUsuario = (id: number, empresaId: number, body: { rol_empresa?: RolEmpresa; activo?: boolean; puede_registrar_personal?: boolean; puede_gestionar_telegram?: boolean }) =>
   api<ApiUsuarioLista>('/usuarios/' + id, { method: 'PATCH', body, query: { empresa_id: empresaId } });
 
+/** Nueva organización (solo propietario); quien la crea queda como propietario. */
+export const crearEmpresa = (empresaActiva: number, nombre: string, ruc?: string) =>
+  api<ApiEmpresa>('/empresas', { method: 'POST', body: { nombre, ...(ruc ? { ruc } : {}) }, query: { empresa_id: empresaActiva } });
 export interface DatosEmpresa { nombre?: string; ruc?: string | null; direccion?: string | null; moneda?: Moneda }
 export const actualizarEmpresa = (empresaId: number, body: DatosEmpresa) =>
   api<ApiEmpresa>('/empresas/' + empresaId, { method: 'PATCH', body, query: { empresa_id: empresaId } });

@@ -105,8 +105,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [enter, reset]);
 
+  // Relee roles y empresas (p. ej. tras crear o renombrar una organización).
   const refresh = useCallback(async () => {
-    if (apiUser.current) setCompanies(await loadCompanies(apiUser.current));
+    if (!apiUser.current) return;
+    const u = { ...apiUser.current, ...(await endpoints.me()) } as ApiUsuario;
+    apiUser.current = u;
+    writeCached(u);
+    setCompanies(await loadCompanies(u));
   }, []);
 
   const applyProfile = useCallback((p: ApiPerfil) => {

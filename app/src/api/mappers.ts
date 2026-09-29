@@ -104,5 +104,6 @@ export function mapMember(u: ApiUsuarioLista, empresaId: number, meId: number): 
     me: u.id === meId,
     personal: u.puede_registrar_personal,
     telegram: u.puede_gestionar_telegram,
+    empresaIds: u.empresas.map((e) => e.empresa_id),
   };
 }

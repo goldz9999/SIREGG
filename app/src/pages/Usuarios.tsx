@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { actualizarUsuario, crearUsuario, listUsuarios } from '../api/endpoints';
+import { actualizarUsuario, crearUsuario, empresasUsuario, listUsuarios } from '../api/endpoints';
 import { mapMember, toRolEmpresa } from '../api/mappers';
 import { Dialog, Icon, Select } from '../components/ui';
 import { ROLE_DOCS, ROLES } from '../data/org';
@@ -9,10 +9,10 @@ import { initials } from '../lib/format';
 import { useViewport } from '../hooks/useViewport';
 import { useApp } from '../state/AppState';
 
-interface NewMember { name: string; email: string; password: string; role: Role; personal: boolean }
+interface NewMember { name: string; email: string; password: string; role: Role; personal: boolean; empresas: string[] }
 
 export default function Usuarios() {
-  const { co, showToast, user } = useApp();
+  const { co, showToast, user, companies } = useApp();
   const { w } = useViewport();
   const [invite, setInvite] = useState<NewMember | null>(null);
   const [busy, setBusy] = useState(false);
@@ -35,6 +35,44 @@ export default function Usuarios() {
   // Only an owner can grant or change the owner role.
   const roleChoices = isOwner ? ROLES : ROLES.slice(1);
   const members: Member[] = apiMembers;
+  // Empresas en las que puedo dar acceso: el propietario, todas; un administrador, las que administra.
+  const orgs = companies.filter((c) => c.kind === 'Empresa');
+  const gestionables = orgs.filter((c) => c.role === 'Propietario' || c.role === 'Administrador').map((c) => c.id);
+  const [accessOf, setAccessOf] = useState<{ m: Member; ids: string[] } | null>(null);
+  const saveAccess = async () => {
+    if (!accessOf || accessOf.m.id === undefined || busy) return;
+    const ids = accessOf.ids.filter((id) => gestionables.includes(id)).map(Number);
+    if (!ids.length && !accessOf.m.empresaIds.some((id) => !gestionables.includes(String(id)))) {
+      showToast('Elige al menos una organización.', 'ph-warning-circle'); return;
+    }
+    setBusy(true);
+    try {
+      await empresasUsuario(accessOf.m.id, Number(co.id), ids);
+      setAccessOf(null);
+      setTick((t) => t + 1);
+      showToast('Organizaciones de ' + accessOf.m.name + ' actualizadas.', 'ph-check-circle');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'No se pudo guardar.', 'ph-warning-circle');
+    } finally {
+      setBusy(false);
+    }
+  };
+  const orgChecks = (selected: string[], onChange: (ids: string[]) => void, fixed: string[] = []) => (
+    <div className="stack" style={{ gap: 6 }}>
+      {orgs.map((o) => {
+        const can = gestionables.includes(o.id);
+        const checked = selected.includes(o.id) || fixed.includes(o.id);
+        return (
+          <label key={o.id} className="row" style={{ gap: 8, fontSize: 14, cursor: can ? 'pointer' : 'default', opacity: can ? 1 : 0.6 }}
+            title={can ? undefined : 'No administras esta organización'}>
+            <input type="checkbox" checked={checked} disabled={!can}
+              onChange={(e) => onChange(e.target.checked ? [...selected, o.id] : selected.filter((x) => x !== o.id))} />
+            {o.name}{o.id === co.id ? ' (actual)' : ''}
+          </label>
+        );
+      })}
+    </div>
+  );
   const update = async (m: Member, body: { rol_empresa?: RolEmpresa; activo?: boolean; puede_registrar_personal?: boolean; puede_gestionar_telegram?: boolean }, ok: string) => {
     if (m.id === undefined) return;
     try {
@@ -58,11 +96,13 @@ export default function Usuarios() {
     if (!/^\S+@\S+\.\S+$/.test(em)) { showToast('Ingresa un correo válido.', 'ph-warning-circle'); return; }
     if (invite.password.length < 6) { showToast('La contraseña temporal debe tener al menos 6 caracteres.', 'ph-warning-circle'); return; }
     if (members.some((m) => m.email.toLowerCase() === em.toLowerCase())) { showToast('Ese correo ya es miembro.', 'ph-warning-circle'); return; }
+    if (!invite.empresas.length) { showToast('Elige al menos una organización.', 'ph-warning-circle'); return; }
     setBusy(true);
     try {
       await crearUsuario(Number(co.id), {
         nombre: name, email: em, password: invite.password, rol_empresa: toRolEmpresa(invite.role),
         ...(isOwner && invite.personal && invite.role !== 'Propietario' ? { puede_registrar_personal: true } : {}),
+        empresa_ids: invite.empresas.map(Number),
       });
       setInvite(null);
       setTick((t) => t + 1);
@@ -79,7 +119,7 @@ export default function Usuarios() {
       <div className="row wrap" style={{ gap: 'var(--space-2)' }}>
         <span style={{ fontSize: 14, color: 'var(--color-neutral-800)' }}>{members.length} miembros en {co.name}</span>
         <span className="grow" />
-        {canManage && <button className="btn btn-primary" onClick={() => setInvite({ name: '', email: '', password: '', role: 'Empleado', personal: false })}><Icon n="ph-user-plus" /> Agregar miembro</button>}
+        {canManage && <button className="btn btn-primary" onClick={() => setInvite({ name: '', email: '', password: '', role: 'Empleado', personal: false, empresas: [co.id] })}><Icon n="ph-user-plus" /> Agregar miembro</button>}
       </div>
       <div className="panel" style={{ gap: 0, padding: '4px 20px' }}>
         {members.map((m) => {
@@ -128,6 +168,12 @@ export default function Usuarios() {
                   onChange={(v) => update(m, { rol_empresa: toRolEmpresa(v as Role) }, 'Rol de ' + m.name + ' cambiado a ' + v + '.')} />
               ) : <span style={{ fontSize: 14, gridColumn: cellCol }}>{m.role}</span>}
               <span className="row" style={{ gap: 'var(--space-1)', justifyContent: 'flex-end', gridColumn: cellCol }}>
+                {editable && m.role !== 'Propietario' && orgs.length > 1 && (
+                  <button className="btn btn-ghost" title="Organizaciones a las que pertenece"
+                    onClick={() => setAccessOf({ m, ids: m.empresaIds.map(String).filter((id) => gestionables.includes(id)) })}>
+                    <Icon n="ph-buildings" /> {m.empresaIds.length}
+                  </button>
+                )}
                 {actions.map((a) => <button key={a.label} className="btn btn-ghost" style={{ color: a.color }} onClick={a.run}>{a.label}</button>)}
               </span>
             </div>
@@ -162,6 +208,12 @@ export default function Usuarios() {
             <label>Rol</label>
             <Select label="Rol" value={invite.role} options={roleChoices.map((v) => ({ v }))} onChange={(v) => setInvite({ ...invite, role: v as Role })} />
           </div>
+          {gestionables.length > 1 && (
+            <div className="field">
+              <label>Organizaciones</label>
+              {orgChecks(invite.empresas, (ids) => setInvite({ ...invite, empresas: ids }))}
+            </div>
+          )}
           {isOwner && invite.role !== 'Propietario' && (
             <label className="row" style={{ gap: 8, fontSize: 14, cursor: 'pointer' }}>
               <input type="checkbox" checked={invite.personal} onChange={(e) => setInvite({ ...invite, personal: e.target.checked })} />
@@ -172,6 +224,20 @@ export default function Usuarios() {
           <div className="dialog-actions">
             <button className="btn btn-ghost" onClick={() => setInvite(null)}>Cancelar</button>
             <button className="btn btn-primary" onClick={sendInvite} disabled={busy}>{busy ? 'Creando…' : 'Crear usuario'}</button>
+          </div>
+        </Dialog>
+      )}
+      {accessOf && (
+        <Dialog onClose={() => setAccessOf(null)}>
+          <div className="dialog-title">Organizaciones de {accessOf.m.name}</div>
+          <span className="muted" style={{ fontSize: 13 }}>
+            Marca a cuáles puede entrar. En las nuevas tendrá el mismo rol que en {co.short}.
+            {!isOwner && ' Solo puedes cambiar las organizaciones que administras.'}
+          </span>
+          {orgChecks(accessOf.ids, (ids) => setAccessOf({ ...accessOf, ids }), accessOf.m.empresaIds.map(String).filter((id) => !gestionables.includes(id)))}
+          <div className="dialog-actions">
+            <button className="btn btn-ghost" onClick={() => setAccessOf(null)}>Cancelar</button>
+            <button className="btn btn-primary" onClick={saveAccess} disabled={busy}>{busy ? 'Guardando…' : 'Guardar'}</button>
           </div>
         </Dialog>
       )}

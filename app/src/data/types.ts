@@ -71,6 +71,8 @@ export interface Member {
   personal: boolean;
   /** Puede gestionar las cuentas del bot de Telegram (lo decide el propietario). */
   telegram: boolean;
+  /** Empresas a las que pertenece. */
+  empresaIds: number[];
 }
 
 export interface Notification {

@@ -5,7 +5,9 @@ import type { PageId } from '../data/types';
 import { useMotion } from '../hooks/useMotion';
 import { useViewport } from '../hooks/useViewport';
 import { useApp, type ThemePref } from '../state/AppState';
-import { CoAvatar, Icon, Seg, UserPhoto } from './ui';
+import * as endpoints from '../api/endpoints';
+import { useAuth } from '../state/Auth';
+import { CoAvatar, Dialog, Icon, Seg, UserPhoto } from './ui';
 
 type Popover = 'company' | 'notif' | 'profile' | null;
 
@@ -30,6 +32,33 @@ export default function Layout() {
   const [open, setOpen] = useState<Popover>(null);
   const [drawer, setDrawer] = useState(false);
   const [coQuery, setCoQuery] = useState('');
+  // Nueva organización (solo propietario). Tras crearla se espera a que aparezca en la lista para entrar.
+  const { refresh } = useAuth();
+  const canCreateCo = app.user.esSuperAdmin || app.companies.some((c) => c.role === 'Propietario');
+  const [newCo, setNewCo] = useState<{ name: string; ruc: string } | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [goTo, setGoTo] = useState<string | null>(null);
+  useEffect(() => {
+    if (goTo && app.companies.some((c) => c.id === goTo)) { setGoTo(null); navigate('/' + app.switchCompany(goTo, 'empresa')); }
+  }, [goTo, app, navigate]);
+  const createCo = async () => {
+    if (!newCo || creating) return;
+    const name = newCo.name.trim();
+    const ruc = newCo.ruc.trim();
+    if (!name) { app.showToast('Escribe el nombre de la organización.', 'ph-warning-circle'); return; }
+    if (ruc && !/^[0-9]{11}$/.test(ruc)) { app.showToast('El RUC debe tener 11 dígitos.', 'ph-warning-circle'); return; }
+    setCreating(true);
+    try {
+      const e = await endpoints.crearEmpresa(Number(co.id === 'personal' ? app.companies[0].id : co.id), name, ruc || undefined);
+      await refresh();
+      setNewCo(null);
+      setGoTo(String(e.id));
+    } catch (err) {
+      app.showToast(err instanceof Error ? err.message : 'No se pudo crear la organización.', 'ph-warning-circle');
+    } finally {
+      setCreating(false);
+    }
+  };
 
   // Pages the active role can't see fall back to the dashboard.
   useEffect(() => {
@@ -136,6 +165,13 @@ export default function Layout() {
               {personalList.length > 0 && <div className="nav-label" style={{ padding: 'var(--space-2) var(--space-2) var(--space-1)' }}>Personal</div>}
               {personalList.map(coOption)}
               {coEmpty && <div className="muted" style={{ padding: 'var(--space-2)', fontSize: 14 }}>Sin coincidencias.</div>}
+              {canCreateCo && (
+                <button className="co-opt" style={{ marginTop: 'var(--space-1)', boxShadow: '0 -1px 0 var(--line)', borderRadius: 0 }}
+                  onClick={() => { setOpen(null); setNewCo({ name: coQuery.trim(), ruc: '' }); }}>
+                  <span className="avatar" style={{ width: 28, height: 28, fontSize: 16, background: 'var(--fill-strong)', color: 'var(--color-text)' }}><Icon n="ph-plus" /></span>
+                  <span style={{ fontSize: 14, fontWeight: 600 }}>Nueva organización</span>
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -236,6 +272,27 @@ export default function Layout() {
           {loading ? <LoadingState name={co.name} /> : <Outlet key={co.id} />}
         </main>
       </div>
+
+      {newCo && (
+        <Dialog onClose={() => setNewCo(null)}>
+          <div className="dialog-title">Nueva organización</div>
+          <div className="field">
+            <label htmlFor="new-co-name">Nombre</label>
+            <input id="new-co-name" className="input" autoFocus placeholder="Mi empresa S.A.C." value={newCo.name}
+              onChange={(e) => setNewCo({ ...newCo, name: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') createCo(); }} />
+          </div>
+          <div className="field">
+            <label htmlFor="new-co-ruc">RUC (opcional)</label>
+            <input id="new-co-ruc" className="input" inputMode="numeric" maxLength={11} placeholder="11 dígitos" value={newCo.ruc}
+              onChange={(e) => setNewCo({ ...newCo, ruc: e.target.value.replace(/\D/g, '') })} onKeyDown={(e) => { if (e.key === 'Enter') createCo(); }} />
+          </div>
+          <span className="muted" style={{ fontSize: 13 }}>Quedarás como propietario. Luego eliges qué usuarios pueden verla desde Usuarios y miembros.</span>
+          <div className="dialog-actions">
+            <button className="btn btn-ghost" onClick={() => setNewCo(null)}>Cancelar</button>
+            <button className="btn btn-primary" onClick={createCo} disabled={creating}>{creating ? 'Creando…' : 'Crear organización'}</button>
+          </div>
+        </Dialog>
+      )}
 
       {app.toast && (
         <div data-toast="1" role="status" className="toast" style={{ left: isMobile ? 'var(--space-4)' : 'auto' }}>
