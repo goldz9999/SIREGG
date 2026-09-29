@@ -35,7 +35,7 @@ export default function Usuarios() {
   // Only an owner can grant or change the owner role.
   const roleChoices = isOwner ? ROLES : ROLES.slice(1);
   const members: Member[] = apiMembers;
-  const update = async (m: Member, body: { rol_empresa?: RolEmpresa; activo?: boolean; puede_registrar_personal?: boolean }, ok: string) => {
+  const update = async (m: Member, body: { rol_empresa?: RolEmpresa; activo?: boolean; puede_registrar_personal?: boolean; puede_gestionar_telegram?: boolean }, ok: string) => {
     if (m.id === undefined) return;
     try {
       await actualizarUsuario(m.id, Number(co.id), body);
@@ -114,6 +114,14 @@ export default function Usuarios() {
                 ) : (
                   <span className={m.personal ? 'tag tag-outline' : 'tag tag-neutral'}>{m.personal ? 'Personales: sí' : 'Personales: no'}</span>
                 )}
+                {m.role !== 'Propietario' && isOwner && !m.me ? (
+                  <label className="row" style={{ gap: 6, fontSize: 13, cursor: 'pointer' }} title="Puede vincular o quitar cuentas del bot de Telegram">
+                    <input type="checkbox" checked={m.telegram}
+                      onChange={(ev) => update(m, { puede_gestionar_telegram: ev.target.checked },
+                        ev.target.checked ? m.name + ' ya puede gestionar las cuentas de Telegram.' : m.name + ' ya no gestiona las cuentas de Telegram.')} />
+                    Gestiona Telegram
+                  </label>
+                ) : m.role !== 'Propietario' && m.telegram && <span className="tag tag-outline">Gestiona Telegram</span>}
               </span>
               {editable ? (
                 <Select label="Rol" value={m.role} options={roleChoices.map((v) => ({ v }))} style={{ gridColumn: cellCol }}

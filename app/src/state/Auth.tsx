@@ -14,6 +14,8 @@ export interface SessionUser {
   lastCompanyId: number | null;
   /** Puede registrar gastos personales (el propietario siempre; el resto si el propietario lo permite). */
   canPersonal: boolean;
+  /** Puede gestionar las cuentas autorizadas del bot de Telegram. */
+  canTelegram: boolean;
   avatarUrl: string | null;
 }
 
@@ -43,7 +45,7 @@ const writeCached = (u: ApiUsuario | null) => {
 
 const toUser = (u: ApiUsuario): SessionUser => {
   const name = u.nombre || u.email || 'Usuario';
-  return { id: u.id, name, email: u.email || '', initials: initialsOf(name), esSuperAdmin: u.es_super_admin, lastCompanyId: u.ultima_empresa_id, canPersonal: !!u.puede_registrar_personal, avatarUrl: u.avatar_url ?? null };
+  return { id: u.id, name, email: u.email || '', initials: initialsOf(name), esSuperAdmin: u.es_super_admin, lastCompanyId: u.ultima_empresa_id, canPersonal: !!u.puede_registrar_personal, canTelegram: !!u.puede_gestionar_telegram, avatarUrl: u.avatar_url ?? null };
 };
 
 async function loadCompanies(u: ApiUsuario): Promise<Company[]> {

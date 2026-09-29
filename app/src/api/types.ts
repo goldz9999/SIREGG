@@ -11,6 +11,8 @@ export interface ApiUsuario {
   puede_registrar_personal: boolean;
   ultima_empresa_id: number | null;
   avatar_url?: string | null;
+  /** Puede vincular o quitar cuentas del bot (el propietario siempre). */
+  puede_gestionar_telegram?: boolean;
 }
 /** Respuesta de PATCH /auth/perfil y /auth/perfil/avatar. */
 export interface ApiPerfil { id: number; nombre: string | null; email: string | null; avatar_url: string | null }
@@ -26,7 +28,19 @@ export interface ApiUsuarioLista {
   tiene_password: boolean;
   /** Permiso efectivo: el propietario siempre puede; el resto si un propietario lo activó. */
   puede_registrar_personal: boolean;
+  puede_gestionar_telegram: boolean;
   empresas: { empresa_id: number; rol: RolEmpresa }[];
+}
+
+/** Fila de GET /telegram/usuarios: miembros de la empresa activa y su cuenta del bot. */
+export interface ApiTelegramUsuario {
+  id: number;
+  nombre: string | null;
+  email: string | null;
+  activo: boolean;
+  telegram_id: number | null;
+  rol_empresa: RolEmpresa;
+  tiene_password: boolean;
 }
 
 export type Moneda = 'PEN' | 'USD';

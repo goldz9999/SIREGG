@@ -158,8 +158,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const base = companies.find((c) => c.id === coId) ?? companies[0];
   const co = useMemo<Company>(() => ({ ...base, review: counts?.requiereRevision ?? 0 }), [base, counts]);
-  const allowed = PERMS[co.role];
   const personal = co.id === PERSONAL_ID;
+  // Bot de Telegram: por rol (propietario) o por permiso que dio el propietario.
+  const allowed = useMemo<PageId[]>(
+    () => (!personal && user.canTelegram && !PERMS[co.role].includes('telegram') ? [...PERMS[co.role], 'telegram'] : PERMS[co.role]),
+    [co.role, personal, user.canTelegram],
+  );
   // Se fija durante el render para que los montos ya salgan con la moneda correcta.
   setCurrency(co.currency);
 

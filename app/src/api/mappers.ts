@@ -99,5 +99,6 @@ export function mapMember(u: ApiUsuarioLista, empresaId: number, meId: number): 
     acc: !u.tiene_password ? '—' : u.activo ? 'Activa' : 'Suspendida',
     me: u.id === meId,
     personal: u.puede_registrar_personal,
+    telegram: u.puede_gestionar_telegram,
   };
 }

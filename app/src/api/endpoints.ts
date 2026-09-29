@@ -1,6 +1,6 @@
 import { api } from './client';
 import type { PatchBody } from './sync';
-import type { ApiCategoria, ApiConteos, ApiEmpresa, ApiEstadoBot, ApiGasto, ApiLogin, ApiPedido, ApiPerfil, ApiProveedor, ApiResumen, ApiUsuario, ApiUsuarioLista, EstadoPedido, Moneda, RolEmpresa } from './types';
+import type { ApiCategoria, ApiConteos, ApiEmpresa, ApiEstadoBot, ApiTelegramUsuario, ApiGasto, ApiLogin, ApiPedido, ApiPerfil, ApiProveedor, ApiResumen, ApiUsuario, ApiUsuarioLista, EstadoPedido, Moneda, RolEmpresa } from './types';
 
 export const login = (email: string, password: string) =>
   api<ApiLogin>('/auth/login', { method: 'POST', body: { email, password } });
@@ -61,7 +61,7 @@ export const renombrarCategoria = (id: number, empresaId: number, nombre: string
 export const eliminarCategoria = (id: number, empresaId: number) =>
   api<unknown>('/categorias/' + id, { method: 'DELETE', query: { empresa_id: empresaId } });
 
-export const actualizarUsuario = (id: number, empresaId: number, body: { rol_empresa?: RolEmpresa; activo?: boolean; puede_registrar_personal?: boolean }) =>
+export const actualizarUsuario = (id: number, empresaId: number, body: { rol_empresa?: RolEmpresa; activo?: boolean; puede_registrar_personal?: boolean; puede_gestionar_telegram?: boolean }) =>
   api<ApiUsuarioLista>('/usuarios/' + id, { method: 'PATCH', body, query: { empresa_id: empresaId } });
 
 export interface DatosEmpresa { nombre?: string; ruc?: string | null; direccion?: string | null; moneda?: Moneda }
@@ -79,3 +79,12 @@ export const conectarBot = (empresaId: number, baseUrl: string) =>
   api<ApiEstadoBot>('/telegram/config/webhook', { method: 'PUT', body: { base_url: baseUrl }, query: { empresa_id: empresaId } });
 export const desconectarBot = (empresaId: number) =>
   api<ApiEstadoBot>('/telegram/config/webhook', { method: 'DELETE', query: { empresa_id: empresaId } });
+
+// Cuentas autorizadas del bot (propietario o quien tenga el permiso), en la empresa activa.
+export const listTelegram = (empresaId: number) => api<ApiTelegramUsuario[]>('/telegram/usuarios', { query: { empresa_id: empresaId } });
+export const vincularTelegram = (id: number, empresaId: number, telegramId: number) =>
+  api<unknown>('/telegram/usuarios/' + id, { method: 'PUT', body: { telegram_id: telegramId }, query: { empresa_id: empresaId } });
+export const quitarTelegram = (id: number, empresaId: number) =>
+  api<unknown>('/telegram/usuarios/' + id, { method: 'DELETE', query: { empresa_id: empresaId } });
+export const crearTelegram = (empresaId: number, nombre: string, telegramId: number) =>
+  api<{ id: number }>('/telegram/usuarios', { method: 'POST', body: { nombre, telegram_id: telegramId }, query: { empresa_id: empresaId } });

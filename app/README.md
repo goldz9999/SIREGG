@@ -45,7 +45,7 @@ En local: `docker build --build-arg VITE_API_URL=http://localhost:3000 -t siregg
 ### Puesta en marcha con Supabase `SIREGG`
 
 La base del proyecto Supabase **SIREGG** (`bqcfsgdlhzjstzbfbner`) ya tiene aplicadas
-`0001_esquema_base.sql` a `0005_perfil_usuario.sql` de
+`0001_esquema_base.sql` a `0006_permiso_telegram.sql` de
 `facturas-app/backend/supabase/migrations/`, el bucket privado `Facturas` y los públicos `logos-empresas` y `avatares`.
 
 1. En `facturas-app/backend/.env` (copia de `.env.example`):
@@ -72,7 +72,8 @@ VITE_API_URL=http://localhost:3000
 - Desde el detalle de un gasto se corrigen proveedor, RUC y medio de pago. El proveedor se busca por nombre en la empresa del gasto (o se crea); el RUC es del proveedor, así que corregirlo vale para todos sus gastos, y no se acepta un RUC que ya tiene otro proveedor. El medio de pago corrige el primer pago del gasto o crea uno.
 - La moneda de la organización (soles o dólares) cambia el símbolo con que se muestran los montos.
 - **Configuración** está al pie de la barra lateral y abre una segunda barra con: Configuración personal, Configuración de empresa, Usuarios y miembros y Bot de Telegram. "Volver" regresa a la última pantalla principal.
-- **Bot de Telegram** (solo propietario): muestra el bot, a qué URL envía los mensajes, cuántos hay en cola y el último error. Si el backend cambia de dominio, se escribe la nueva URL (https) y se reconecta; también se puede desconectar. El token y el secret siguen en las variables de entorno del backend (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`).
+- **Cuentas autorizadas del bot** (Configuración → Bot de Telegram): el bot solo atiende a usuarios activos con ID de Telegram. Ahí se autoriza, cambia o quita el ID de cada miembro, o se da de alta a alguien que solo usa el bot (queda como Empleado). Lo hace el propietario o quien él autorice (casilla "Gestiona Telegram" en Usuarios). Nadie más que un propietario toca la cuenta de un propietario.
+- **Conexión del bot** (solo propietario, misma pantalla): muestra el bot, a qué URL envía los mensajes, cuántos hay en cola y el último error. Si el backend cambia de dominio, se escribe la nueva URL (https) y se reconecta; también se puede desconectar. El token y el secret siguen en las variables de entorno del backend (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`).
 - **Configuración personal:** cada usuario cambia su nombre, correo, contraseña y foto (`/auth/perfil`). Cambiar el correo o la contraseña pide la contraseña actual.
 - **Quién registra gastos personales lo decide el propietario** (casilla "Gastos personales" en Usuarios, también al crear un miembro). El propietario siempre puede; el resto de roles no, salvo que el propietario lo active. Sin permiso no aparece el espacio Gastos personales ni la opción "Personal" en sus gastos, y el backend lo hace cumplir (Telegram, alta y edición de gastos).
 - **Gastos personales** aparece en el selector, debajo de las organizaciones. No es una empresa: muestra tus gastos marcados como personales en todas tus organizaciones (`?ambito=personal`). Cada acción se guarda en la empresa del gasto. Proveedores, categorías y proyectos no aparecen en este espacio porque cada empresa tiene los suyos.

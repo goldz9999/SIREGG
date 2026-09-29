@@ -69,6 +69,8 @@ export interface Member {
   me?: boolean;
   /** Puede registrar gastos personales (lo decide el propietario). */
   personal: boolean;
+  /** Puede gestionar las cuentas del bot de Telegram (lo decide el propietario). */
+  telegram: boolean;
 }
 
 export interface Notification {
