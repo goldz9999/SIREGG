@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import * as endpoints from '../api/endpoints';
 import { mapGasto, PERSONAL, PERSONAL_ID } from '../api/mappers';
 import { planSync } from '../api/sync';
+import { escucharGastos } from '../api/realtime';
 import type { ApiCategoria, ApiConteos, ApiPedido, ApiProveedor, ApiResumen } from '../api/types';
 import { isPending } from '../data/expenses';
 import { PERMS } from '../data/org';
@@ -155,6 +156,29 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   }, [coId, empresaIds, reloadTick, showToast]);
 
   const reload = useCallback(() => { silentRef.current = true; setReloadTick((t) => t + 1); }, []);
+
+  // Tiempo real: el backend avisa por socket cuando entra o cambia un gasto (p. ej. una
+  // factura enviada por Telegram) y se recarga sin mostrar el estado de carga. Varios avisos
+  // seguidos (factura + foto + pago) se juntan en una sola recarga.
+  const lastLoad = useRef(Date.now());
+  useEffect(() => { lastLoad.current = Date.now(); }, [reloadTick, coId]);
+  useEffect(() => {
+    const ids = coId === PERSONAL_ID ? empresaIds : [Number(coId)];
+    let timer: number | undefined;
+    const stop = escucharGastos(ids, (c) => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        reload();
+        if (c.tipo === 'creado') showToast('Llegó un gasto nuevo.', 'ph-receipt');
+      }, 600);
+    });
+    // Respaldo si el socket no conecta (proxy, red): al volver a la pestaña se refresca.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && Date.now() - lastLoad.current > 20000) reload();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { window.clearTimeout(timer); stop(); document.removeEventListener('visibilitychange', onVisible); };
+  }, [coId, empresaIds, reload, showToast]);
 
   const base = companies.find((c) => c.id === coId) ?? companies[0];
   const co = useMemo<Company>(() => ({ ...base, review: counts?.requiereRevision ?? 0 }), [base, counts]);

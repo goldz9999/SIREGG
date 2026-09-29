@@ -1,4 +1,4 @@
-const BASE = ((import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:3000').replace(/\/$/, '');
+export const BASE = ((import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:3000').replace(/\/$/, '');
 const TOKEN_KEY = 'siregg-token';
 
 let memToken: string | null = null;
