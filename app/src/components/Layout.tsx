@@ -214,7 +214,7 @@ function PageHeader({ page }: { page: PageId }) {
   const navigate = useNavigate();
   const app = useApp();
   const isDash = page === 'dashboard' && !loading;
-  const scope = co.role === 'Empleado' ? 'Mostrando solo tus gastos' : 'Todos los gastos de la organización';
+  const scope = 'Todos los gastos de la organización';
   let actions: ReactNode = null;
   if (isDash) {
     const goReports = () => app.allowed.includes('reportes') ? navigate('/reportes') : app.showToast('Tu rol no tiene acceso a Reportes en ' + co.short, 'ph-lock');

@@ -3,7 +3,7 @@ import { Icon } from '../components/ui';
 import { useAuth } from '../state/Auth';
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, error: sessionError } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -37,7 +37,7 @@ export default function Login() {
           <label htmlFor="login-pass">Contraseña</label>
           <input id="login-pass" className="input" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
         </div>
-        {error && <div role="alert" className="row" style={{ gap: 8, color: 'var(--color-accent-2-700)', fontSize: 14 }}><Icon n="ph-warning-circle" />{error}</div>}
+        {(error || sessionError) && <div role="alert" className="row" style={{ gap: 8, color: 'var(--color-accent-2-700)', fontSize: 14 }}><Icon n="ph-warning-circle" />{error || sessionError}</div>}
         <button className="btn btn-primary" type="submit" disabled={busy}>{busy ? 'Entrando…' : 'Entrar'}</button>
       </form>
     </div>

@@ -15,6 +15,10 @@ describe('planSync', () => {
   it('duplicado: "Descartar este gasto" confirma el duplicado', () => {
     expect(planSync({ ...base, st: 'dup' }, { st: 'desc' }, cats)).toEqual({ kind: 'confirmarDuplicado' });
   });
+  it('duplicado con datos corregidos: primero resuelve el duplicado y luego guarda los cambios', () => {
+    expect(planSync({ ...base, st: 'dup' }, { st: 'ok', amt: 30 }, cats)).toEqual({ kind: 'descartarDuplicado', body: { monto: 30 } });
+    expect(planSync({ ...base, st: 'dup' }, { st: 'desc', desc: 'Otro' }, cats)).toEqual({ kind: 'confirmarDuplicado', body: { descripcion: 'Otro' } });
+  });
   it('confirmar sin cambios usa confirmar-confianza', () => {
     expect(planSync(base, { st: 'ok' }, cats)).toEqual({ kind: 'confirmarConfianza' });
   });

@@ -54,7 +54,7 @@ function sparkOf(vals: number[]) {
   return curve(vals.map((v, i) => [(i / (vals.length - 1)) * 100, 3 + (1 - (v - n) / (x - n || 1)) * 22] as [number, number]));
 }
 
-export function buildDashboard(co: Company, resumen: ApiResumen | null, expenses: Expense[]) {
+export function buildDashboard(_co: Company, resumen: ApiResumen | null, expenses: Expense[]) {
   const r = resumen ?? EMPTY;
   const days = lastFourteenDays(r);
   const vals = days.map((d) => d.total);
@@ -99,7 +99,8 @@ export function buildDashboard(co: Company, resumen: ApiResumen | null, expenses
     .concat('HOY');
 
   return {
-    scope: co.role === 'Empleado' ? 'Mostrando solo tus gastos' : 'Todos los gastos de la organización',
+    // El backend no filtra por usuario según el rol, así que no se afirma lo contrario.
+    scope: 'Todos los gastos de la organización',
     month: r.month,
     monthDelta: NO_DELTA,
     monthName: MONTH_NAMES[mIdx],

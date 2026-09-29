@@ -199,13 +199,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     if (plan.kind === 'none') return;
     const n = Number(id);
     const empresaId = Number(coId);
-    const call =
-      plan.kind === 'patch' ? endpoints.patchGasto(n, empresaId, plan.body)
-      : plan.kind === 'confirmarConfianza' ? endpoints.confirmarConfianza(n, empresaId)
-      : plan.kind === 'confirmarDuplicado' ? endpoints.confirmarDuplicado(n, empresaId)
-      : endpoints.descartarDuplicado(n, empresaId);
+    const run = async () => {
+      if (plan.kind === 'patch') { await endpoints.patchGasto(n, empresaId, plan.body); return; }
+      if (plan.kind === 'confirmarConfianza') { await endpoints.confirmarConfianza(n, empresaId); return; }
+      if (plan.kind === 'confirmarDuplicado') await endpoints.confirmarDuplicado(n, empresaId);
+      else await endpoints.descartarDuplicado(n, empresaId);
+      // Datos corregidos junto con la decisión sobre el duplicado: se guardan después.
+      if (plan.body) await endpoints.patchGasto(n, empresaId, plan.body);
+    };
 
-    call
+    run()
       .then(() => { silentRef.current = true; setReloadTick((t) => t + 1); })
       .catch((err) => {
         setEdits((s) => {

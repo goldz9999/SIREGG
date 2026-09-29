@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { clearToken, getToken, setToken, setUnauthorizedHandler } from '../api/client';
+import { ApiError, clearToken, getToken, setToken, setUnauthorizedHandler } from '../api/client';
 import * as endpoints from '../api/endpoints';
 import { initialsOf, mapCompany } from '../api/mappers';
 import type { ApiUsuario } from '../api/types';
@@ -18,6 +18,8 @@ interface AuthState {
   status: 'loading' | 'out' | 'in';
   user: SessionUser | null;
   companies: Company[];
+  /** Por qué no se pudo restaurar la sesión (servidor caído, etc.). El token se conserva. */
+  error: string;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
 }
@@ -48,10 +50,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthState['status']>(getToken() ? 'loading' : 'out');
   const [user, setUser] = useState<SessionUser | null>(null);
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [error, setError] = useState('');
 
   const reset = useCallback(() => {
     clearToken(); writeCached(null);
-    setUser(null); setCompanies([]); setStatus('out');
+    setUser(null); setCompanies([]); setError(''); setStatus('out');
   }, []);
 
   const enter = useCallback(async (u: ApiUsuario) => {
@@ -71,8 +74,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const cached = readCached();
     endpoints.me()
       .then((fresh) => enter({ ...(cached ?? {}), ...fresh } as ApiUsuario))
-      .catch(reset);
-  }, [enter, reset]);
+      .catch((e) => {
+        // 401: el cliente ya cerró la sesión. Cualquier otro error (servidor caído, 500)
+        // NO borra el token: se muestra el motivo y recargar la página reintenta.
+        if (e instanceof ApiError && e.status === 401) return;
+        setError(e instanceof Error ? e.message : 'No se pudo restaurar la sesión.');
+        setStatus('out');
+      });
+  }, [enter]);
 
   const login = useCallback(async (email: string, password: string) => {
     const res = await endpoints.login(email, password);
@@ -85,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [enter, reset]);
 
-  const value = useMemo<AuthState>(() => ({ status, user, companies, login, logout: reset }), [status, user, companies, login, reset]);
+  const value = useMemo<AuthState>(() => ({ status, user, companies, error, login, logout: reset }), [status, user, companies, error, login, reset]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
