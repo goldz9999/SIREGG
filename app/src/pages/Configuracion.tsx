@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as endpoints from '../api/endpoints';
-import { CoAvatar, Icon, Seg, Select } from '../components/ui';
+import { CoAvatar, Icon, Seg, Select, UserPhoto } from '../components/ui';
 import type { Moneda } from '../api/types';
 import { useApp } from '../state/AppState';
 import { useAuth } from '../state/Auth';
@@ -112,21 +112,127 @@ export function ConfigEmpresa() {
   );
 }
 
+const MAX_FOTO = 2 * 1024 * 1024;
+
 export function ConfigPersonal() {
-  const { theme, setTheme, user, companies: all, logout } = useApp();
+  const { theme, setTheme, user, companies: all, logout, showToast } = useApp();
+  const { applyProfile } = useAuth();
   const companies = all.filter((c) => c.kind === 'Empresa');
+  const [name, setName] = useState(user.name);
+  const [email, setEmail] = useState(user.email);
+  const [pwd, setPwd] = useState({ actual: '', nueva: '', repetir: '' });
+  const [emailPwd, setEmailPwd] = useState('');
+  const [busy, setBusy] = useState<'perfil' | 'clave' | 'foto' | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const nameT = name.trim();
+  const emailT = email.trim();
+  const emailChanged = emailT !== user.email;
+  const emailOk = /^\S+@\S+\.\S+$/.test(emailT);
+  const profileChanged = nameT !== user.name || emailChanged;
+  const canSaveProfile = profileChanged && nameT !== '' && emailOk && (!emailChanged || emailPwd !== '') && !busy;
+  const pwdError = pwd.nueva && pwd.nueva.length < 6 ? 'Mínimo 6 caracteres.' : pwd.repetir && pwd.repetir !== pwd.nueva ? 'Las contraseñas no coinciden.' : '';
+  const canSavePwd = !!pwd.actual && pwd.nueva.length >= 6 && pwd.nueva === pwd.repetir && !busy;
+
+  const run = async (kind: 'perfil' | 'clave' | 'foto', fn: () => Promise<void>, ok: string) => {
+    setBusy(kind);
+    try {
+      await fn();
+      showToast(ok, 'ph-check-circle');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'No se pudo guardar.', 'ph-warning-circle');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const saveProfile = () => {
+    if (!canSaveProfile) return;
+    run('perfil', async () => {
+      const body: endpoints.CambiosPerfil = { nombre: nameT };
+      if (emailChanged) Object.assign(body, { email: emailT, password_actual: emailPwd });
+      applyProfile(await endpoints.actualizarPerfil(body));
+      setEmailPwd('');
+    }, emailChanged ? 'Perfil actualizado. Usa el correo nuevo para iniciar sesión.' : 'Perfil actualizado.');
+  };
+
+  const savePassword = () => {
+    if (!canSavePwd) return;
+    run('clave', async () => {
+      await endpoints.actualizarPerfil({ password_actual: pwd.actual, password_nueva: pwd.nueva });
+      setPwd({ actual: '', nueva: '', repetir: '' });
+    }, 'Contraseña actualizada.');
+  };
+
+  const uploadPhoto = (file: File | undefined) => {
+    if (fileRef.current) fileRef.current.value = '';
+    if (!file) return;
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) { showToast('La foto debe ser PNG, JPG o WebP.', 'ph-warning-circle'); return; }
+    if (file.size > MAX_FOTO) { showToast('La foto no puede pesar más de 2 MB.', 'ph-warning-circle'); return; }
+    run('foto', async () => applyProfile(await endpoints.subirAvatar(file)), 'Foto de perfil actualizada.');
+  };
+  const removePhoto = () => run('foto', async () => applyProfile(await endpoints.quitarAvatar()), 'Foto de perfil eliminada.');
+
+  const pwdInput = (id: string, label: string, k: keyof typeof pwd, onEnter: () => void, auto: string) => (
+    <div className="field">
+      <label htmlFor={id}>{label}</label>
+      <input id={id} className="input" type="password" autoComplete={auto} value={pwd[k]}
+        onChange={(e) => setPwd((p) => ({ ...p, [k]: e.target.value }))} onKeyDown={(e) => { if (e.key === 'Enter') onEnter(); }} />
+    </div>
+  );
 
   return (
     <div className="stack" style={{ gap: 20, maxWidth: 820 }}>
       <div data-a="1" className="panel" style={{ gap: 14 }}>
         <h2 className="panel-title-lg">Perfil</h2>
-        <div className="row" style={{ gap: 'var(--space-4)' }}>
-          <span className="icon-tile" style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--color-accent-100)', color: 'var(--color-accent-900)', fontSize: 22, fontWeight: 700 }}>{user.initials}</span>
-          <div className="stack">
+        <div className="row wrap" style={{ gap: 'var(--space-4)' }}>
+          <span className="icon-tile" style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--color-accent-100)', color: 'var(--color-accent-900)', fontSize: 22, fontWeight: 700, overflow: 'hidden' }}>
+            <UserPhoto user={user} size={64} />
+          </span>
+          <div className="stack grow" style={{ gap: 2 }}>
             <strong>{user.name}</strong>
             <span className="muted" style={{ fontSize: 13 }}>{user.email} · Miembro de {companies.length} {companies.length === 1 ? 'organización' : 'organizaciones'}</span>
           </div>
+          <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => uploadPhoto(e.target.files?.[0])} />
+          <div className="row wrap" style={{ gap: 'var(--space-2)' }}>
+            <button className="btn btn-secondary" onClick={() => fileRef.current?.click()} disabled={!!busy}>
+              <Icon n="ph-camera" /> {busy === 'foto' ? 'Subiendo…' : user.avatarUrl ? 'Cambiar foto' : 'Subir foto'}
+            </button>
+            {user.avatarUrl && <button className="btn btn-ghost" onClick={removePhoto} disabled={!!busy}><Icon n="ph-trash" /> Quitar</button>}
+          </div>
         </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,260px),1fr))', gap: 'var(--space-3) var(--space-4)' }}>
+          <div className="field">
+            <label htmlFor="me-name">Nombre</label>
+            <input id="me-name" className="input" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') saveProfile(); }} />
+          </div>
+          <div className="field">
+            <label htmlFor="me-email">Correo electrónico</label>
+            <input id="me-email" className="input" type="email" autoComplete="email" value={email} aria-invalid={!emailOk}
+              onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') saveProfile(); }} />
+            {!emailOk && <span style={{ fontSize: 12, color: 'var(--color-accent-2-700)' }}>Escribe un correo válido.</span>}
+          </div>
+          {emailChanged && emailOk && (
+            <div style={{ gridColumn: '1 / -1', maxWidth: 420 }}>
+              <div className="field">
+                <label htmlFor="me-pwd-email">Contraseña actual (para cambiar el correo)</label>
+                <input id="me-pwd-email" className="input" type="password" autoComplete="current-password" value={emailPwd}
+                  onChange={(e) => setEmailPwd(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') saveProfile(); }} />
+              </div>
+            </div>
+          )}
+        </div>
+        <div><button className="btn btn-primary" onClick={saveProfile} disabled={!canSaveProfile}><Icon n="ph-floppy-disk" /> {busy === 'perfil' ? 'Guardando…' : 'Guardar perfil'}</button></div>
+      </div>
+      <div data-a="1" className="panel" style={{ gap: 14 }}>
+        <h2 className="panel-title-lg">Contraseña</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,220px),1fr))', gap: 'var(--space-3) var(--space-4)' }}>
+          {pwdInput('me-pwd', 'Contraseña actual', 'actual', savePassword, 'current-password')}
+          {pwdInput('me-pwd-new', 'Contraseña nueva', 'nueva', savePassword, 'new-password')}
+          {pwdInput('me-pwd-rep', 'Repite la contraseña nueva', 'repetir', savePassword, 'new-password')}
+        </div>
+        {pwdError && <span style={{ fontSize: 12, color: 'var(--color-accent-2-700)' }}>{pwdError}</span>}
+        <div><button className="btn btn-primary" onClick={savePassword} disabled={!canSavePwd}><Icon n="ph-lock-key" /> {busy === 'clave' ? 'Guardando…' : 'Cambiar contraseña'}</button></div>
       </div>
       <div data-a="1" className="panel" style={{ gap: 14 }}>
         <h2 className="panel-title-lg">Apariencia</h2>

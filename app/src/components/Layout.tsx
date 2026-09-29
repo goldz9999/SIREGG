@@ -5,7 +5,7 @@ import type { PageId } from '../data/types';
 import { useMotion } from '../hooks/useMotion';
 import { useViewport } from '../hooks/useViewport';
 import { useApp, type ThemePref } from '../state/AppState';
-import { CoAvatar, Icon, Seg } from './ui';
+import { CoAvatar, Icon, Seg, UserPhoto } from './ui';
 
 type Popover = 'company' | 'notif' | 'profile' | null;
 
@@ -183,7 +183,7 @@ export default function Layout() {
           )}
 
           <div style={{ position: 'relative' }}>
-            <button className="me-avatar" aria-label="Perfil" onClick={() => toggle('profile')}>{app.user.initials}</button>
+            <button className="me-avatar" aria-label="Perfil" onClick={() => toggle('profile')} style={{ overflow: 'hidden', padding: app.user.avatarUrl ? 0 : undefined }}><UserPhoto user={app.user} /></button>
             {open === 'profile' && (
               <div data-pop="1" className="pop" style={{ right: 0, top: 'calc(100% + 6px)', width: 260, padding: 'var(--space-3)', gap: 'var(--space-2)' }}>
                 <div className="stack" style={{ lineHeight: 1.3 }}><strong>{app.user.name}</strong><span className="muted" style={{ fontSize: 13 }}>{app.user.email}</span></div>

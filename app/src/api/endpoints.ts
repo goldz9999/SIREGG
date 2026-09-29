@@ -1,10 +1,19 @@
 import { api } from './client';
 import type { PatchBody } from './sync';
-import type { ApiCategoria, ApiConteos, ApiEmpresa, ApiGasto, ApiLogin, ApiPedido, ApiProveedor, ApiResumen, ApiUsuario, ApiUsuarioLista, EstadoPedido, Moneda, RolEmpresa } from './types';
+import type { ApiCategoria, ApiConteos, ApiEmpresa, ApiGasto, ApiLogin, ApiPedido, ApiPerfil, ApiProveedor, ApiResumen, ApiUsuario, ApiUsuarioLista, EstadoPedido, Moneda, RolEmpresa } from './types';
 
 export const login = (email: string, password: string) =>
   api<ApiLogin>('/auth/login', { method: 'POST', body: { email, password } });
 export const me = () => api<Partial<ApiUsuario>>('/auth/me', { method: 'POST' });
+// Configuración personal: siempre sobre el usuario de la sesión.
+export interface CambiosPerfil { nombre?: string; email?: string; password_actual?: string; password_nueva?: string }
+export const actualizarPerfil = (body: CambiosPerfil) => api<ApiPerfil>('/auth/perfil', { method: 'PATCH', body });
+export const subirAvatar = (file: File) => {
+  const form = new FormData();
+  form.append('file', file);
+  return api<ApiPerfil>('/auth/perfil/avatar', { method: 'PATCH', body: form });
+};
+export const quitarAvatar = () => api<ApiPerfil>('/auth/perfil/avatar', { method: 'DELETE' });
 export const empresasMias = () => api<ApiEmpresa[]>('/empresas/mias');
 export const setEmpresaActiva = (empresaId: number) =>
   api<{ ultima_empresa_id: number }>('/auth/empresa-activa', { method: 'PATCH', body: { empresa_id: empresaId } });

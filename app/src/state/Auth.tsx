@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { ApiError, clearToken, getToken, setToken, setUnauthorizedHandler } from '../api/client';
 import * as endpoints from '../api/endpoints';
 import { initialsOf, mapCompany } from '../api/mappers';
-import type { ApiUsuario } from '../api/types';
+import type { ApiPerfil, ApiUsuario } from '../api/types';
 import type { Company } from '../data/types';
 
 export interface SessionUser {
@@ -14,6 +14,7 @@ export interface SessionUser {
   lastCompanyId: number | null;
   /** Puede registrar gastos personales (el propietario siempre; el resto si el propietario lo permite). */
   canPersonal: boolean;
+  avatarUrl: string | null;
 }
 
 interface AuthState {
@@ -26,6 +27,8 @@ interface AuthState {
   logout: () => void;
   /** Vuelve a pedir las empresas (p. ej. tras renombrar una). */
   refresh: () => Promise<void>;
+  /** Aplica a la sesión el perfil que devolvió el backend (nombre, correo, foto). */
+  applyProfile: (p: ApiPerfil) => void;
 }
 
 const Ctx = createContext<AuthState | null>(null);
@@ -40,7 +43,7 @@ const writeCached = (u: ApiUsuario | null) => {
 
 const toUser = (u: ApiUsuario): SessionUser => {
   const name = u.nombre || u.email || 'Usuario';
-  return { id: u.id, name, email: u.email || '', initials: initialsOf(name), esSuperAdmin: u.es_super_admin, lastCompanyId: u.ultima_empresa_id, canPersonal: !!u.puede_registrar_personal };
+  return { id: u.id, name, email: u.email || '', initials: initialsOf(name), esSuperAdmin: u.es_super_admin, lastCompanyId: u.ultima_empresa_id, canPersonal: !!u.puede_registrar_personal, avatarUrl: u.avatar_url ?? null };
 };
 
 async function loadCompanies(u: ApiUsuario): Promise<Company[]> {
@@ -104,7 +107,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (apiUser.current) setCompanies(await loadCompanies(apiUser.current));
   }, []);
 
-  const value = useMemo<AuthState>(() => ({ status, user, companies, error, login, logout: reset, refresh }), [status, user, companies, error, login, reset, refresh]);
+  const applyProfile = useCallback((p: ApiPerfil) => {
+    if (!apiUser.current) return;
+    const u: ApiUsuario = { ...apiUser.current, nombre: p.nombre, email: p.email, avatar_url: p.avatar_url };
+    apiUser.current = u;
+    writeCached(u);
+    setUser(toUser(u));
+  }, []);
+
+  const value = useMemo<AuthState>(() => ({ status, user, companies, error, login, logout: reset, refresh, applyProfile }), [status, user, companies, error, login, reset, refresh, applyProfile]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

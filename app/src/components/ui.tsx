@@ -117,3 +117,13 @@ export function CoAvatar({ co, size, fontSize }: { co: { initials: string; color
     </span>
   );
 }
+
+/** Foto de perfil del usuario, o sus iniciales si no tiene (o si la imagen no carga). */
+export function UserPhoto({ user, size }: { user: { name: string; initials: string; avatarUrl: string | null }; size?: number }) {
+  const [broken, setBroken] = useState<string | null>(null);
+  if (user.avatarUrl && broken !== user.avatarUrl) {
+    return <img src={user.avatarUrl} alt={'Foto de ' + user.name} onError={() => setBroken(user.avatarUrl)}
+      style={{ width: size ?? '100%', height: size ?? '100%', objectFit: 'cover', borderRadius: '50%', display: 'block' }} />;
+  }
+  return <>{user.initials}</>;
+}

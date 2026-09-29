@@ -10,7 +10,10 @@ export interface ApiUsuario {
   empresas: { empresa_id: number; rol: RolEmpresa }[];
   puede_registrar_personal: boolean;
   ultima_empresa_id: number | null;
+  avatar_url?: string | null;
 }
+/** Respuesta de PATCH /auth/perfil y /auth/perfil/avatar. */
+export interface ApiPerfil { id: number; nombre: string | null; email: string | null; avatar_url: string | null }
 export interface ApiLogin { access_token: string; usuario: ApiUsuario }
 
 /** Fila de GET /usuarios (sin hash de contraseña). */
