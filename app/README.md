@@ -19,6 +19,27 @@ npm run build      # typecheck + build de producción en dist/
 | `src/pages/` | Una pantalla por ruta: `/dashboard`, `/revision`, `/gastos`, `/gastos/:id`, `/comprobantes`, `/proveedores`, `/proyectos`, `/categorias`, `/reportes`, `/usuarios`, `/empresa`, `/personal`. |
 | `src/styles/` | `base.css` (componentes base heredados de Broadsheet), `theme.css` (tokens claro/oscuro de v3), `app.css` (layout y patrones). |
 
+## Despliegue en Railway (Docker)
+
+Dos servicios en el mismo proyecto de Railway, cada uno con su Dockerfile y su `railway.json`
+(el `railway.json` obliga a usar el Dockerfile en vez de Railpack):
+
+| Servicio | Repo | Root Directory | Config file path | Variables |
+| --- | --- | --- | --- | --- |
+| backend | `facturas-app` | `/backend` | `/backend/railway.json` | `SUPABASE_URL`, `SUPABASE_KEY` (service_role), `JWT_SECRET`, `FRONTEND_URL` (URL pública del frontend), `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `GEMINI_API_KEY`, `GEMINI_MODEL` |
+| frontend | `SIREGG` | `/app` | `/app/railway.json` | `VITE_API_URL` (URL pública del backend, `https://…`) |
+
+1. En cada servicio: *Settings → Source*: Root Directory; *Settings → Config-as-code*: la ruta del `railway.json`.
+   Si el servicio ya tenía **Builder: Railpack**, el `railway.json` lo cambia a Dockerfile.
+2. *Settings → Networking → Generate Domain* en los dos. Railway asigna `PORT`; no hace falta definirlo.
+3. `VITE_API_URL` se incrusta al compilar: si cambia la URL del backend, hay que volver a desplegar el frontend.
+   Sin esa variable el build falla a propósito.
+4. `FRONTEND_URL` del backend debe ser exactamente el dominio del frontend (sin `/` final), o el navegador bloqueará las llamadas (CORS).
+5. Con el backend ya publicado, en el panel: Configuración → Bot de Telegram → pega la URL del backend → Conectar bot.
+
+Chequeo de salud: el backend responde `GET /health`; el frontend, `GET /`.
+En local: `docker build --build-arg VITE_API_URL=http://localhost:3000 -t siregg-frontend . && docker run -p 8080:8080 siregg-frontend`.
+
 ## Backend
 
 ### Puesta en marcha con Supabase `SIREGG`
