@@ -1,0 +1,109 @@
+/* SIREGG v3 — "fintech moderno" direction. Light and dark palettes are
+   designed separately (not an inversion). The theme class lives on <html>. */
+
+body { margin: 0; background: var(--color-bg); color: var(--color-text); font-family: var(--font-body); }
+a { color: var(--color-accent-700); }
+a:hover { color: var(--color-accent-900); }
+button {
+  font-family: inherit;
+  transition: background-color .18s ease, box-shadow .22s ease, transform .2s cubic-bezier(.2,.8,.2,1), color .18s ease;
+}
+button:active:not(:disabled) { transform: scale(.97); }
+.card { transition: box-shadow .22s ease, transform .22s cubic-bezier(.2,.8,.2,1); }
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+
+.theme-light, .theme-dark {
+  --font-heading: Geist, system-ui, sans-serif;
+  --font-body: Geist, system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
+  --font-heading-weight: 600;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  font-family: Geist, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.theme-light {
+  --color-bg: #f5f6f8; --color-surface: #ffffff; --color-raised: #ffffff; --color-side: #fafbfc;
+  --color-pop: #fffffff2; --color-glass: #f5f6f8cc; --color-seg: #ffffff; --color-text: #0e1116;
+  --color-neutral-100: #eef0f3; --color-neutral-200: #e4e7ec; --color-neutral-300: #d3d8e0;
+  --color-neutral-500: #8b92a3; --color-neutral-700: #5b6272; --color-neutral-800: #3a404c; --color-neutral-900: #0e1116;
+  --color-divider: #e1e4ea;
+  --line: rgba(14,17,22,.08); --fill: rgba(14,17,22,.04); --fill-strong: rgba(14,17,22,.065); --hl: rgba(255,255,255,.9);
+  --color-accent: #0891b2; --color-accent-100: #e0f5fb; --color-accent-200: #bfeaf6; --color-accent-400: #22b8e6;
+  --color-accent-500: #0891b2; --color-accent-600: #0e7490; --color-accent-700: #0b6480; --color-accent-800: #0a526a; --color-accent-900: #083f52;
+  --color-accent-2: #db2777; --color-accent-2-100: #fde7f1; --color-accent-2-400: #f472b6; --color-accent-2-500: #db2777;
+  --color-accent-2-700: #a3195a; --color-accent-2-800: #86154b;
+  --color-violet: #6d5dfc;
+  --shadow-sm: 0 1px 2px rgba(16,24,40,.05);
+  --shadow-md: 0 6px 20px rgba(16,24,40,.07), 0 1px 2px rgba(16,24,40,.05);
+  --shadow-lg: 0 24px 56px rgba(16,24,40,.16);
+  --glow: radial-gradient(900px 380px at 78% -120px, rgba(34,184,230,.13), transparent 70%), radial-gradient(700px 320px at 20% -160px, rgba(109,93,252,.08), transparent 70%);
+  color-scheme: light;
+}
+
+.theme-dark {
+  --color-bg: #0a0c10; --color-surface: #10141b; --color-raised: #10141b; --color-side: #0c0f14;
+  --color-pop: #141922f2; --color-glass: #0a0c10b8; --color-seg: #1f2531; --color-text: #e8eaf0;
+  --color-neutral-100: #161b24; --color-neutral-200: #1d232e; --color-neutral-300: #2a3140;
+  --color-neutral-500: #5b6272; --color-neutral-700: #8b92a3; --color-neutral-800: #aab1c0; --color-neutral-900: #e8eaf0;
+  --color-divider: #252b36;
+  --line: rgba(255,255,255,.075); --fill: rgba(255,255,255,.04); --fill-strong: rgba(255,255,255,.075); --hl: rgba(255,255,255,.05);
+  --color-accent: #22b8e6; --color-accent-100: #0d2a36; --color-accent-200: #0f3a4a; --color-accent-400: #4cc7ee;
+  --color-accent-500: #22b8e6; --color-accent-600: #4cc7ee; --color-accent-700: #7dd3f0; --color-accent-800: #a6e2f5; --color-accent-900: #cdeffa;
+  --color-accent-2: #f43f8e; --color-accent-2-100: #2e1020; --color-accent-2-400: #ff6aa9; --color-accent-2-500: #f43f8e;
+  --color-accent-2-700: #ff8cbf; --color-accent-2-800: #ffb3d4;
+  --color-violet: #8b7dff;
+  --shadow-sm: 0 1px 0 rgba(0,0,0,.3);
+  --shadow-md: 0 10px 30px rgba(0,0,0,.4);
+  --shadow-lg: 0 28px 70px rgba(0,0,0,.6);
+  --glow: radial-gradient(900px 420px at 72% -140px, rgba(34,184,230,.14), transparent 70%), radial-gradient(700px 380px at 12% -180px, rgba(109,93,252,.12), transparent 70%);
+  color-scheme: dark;
+}
+
+.theme-light h1, .theme-light h2, .theme-light h3,
+.theme-dark h1, .theme-dark h2, .theme-dark h3 { letter-spacing: -.022em; }
+
+.btn { font-family: inherit; font-weight: 500; border-radius: 10px; padding: 9px 14px; }
+.btn-primary {
+  background: var(--color-text); color: var(--color-bg);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 8px 22px -8px var(--color-accent);
+}
+.btn-primary:hover { background: var(--color-neutral-800); }
+.btn-primary:active { background: var(--color-neutral-700); }
+.btn-secondary { background: var(--fill); border-color: var(--line); }
+.btn-secondary:hover { background: var(--fill-strong); }
+.btn-ghost { color: var(--color-accent-700); }
+.tag { border-radius: 7px; font-weight: 500; font-size: 11.5px; padding: 3px 9px; }
+.tag-outline { border: 1px solid var(--color-divider); color: var(--color-neutral-800); }
+.input {
+  background: var(--fill); border: 1px solid var(--line); border-radius: 10px; min-height: 38px;
+  transition: border-color .2s, box-shadow .2s;
+}
+.input:focus-visible { box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent) 18%, transparent); }
+select.input option { background: var(--color-surface); color: var(--color-text); }
+.seg { background: var(--fill); border: 1px solid var(--line); border-radius: 11px; padding: 3px; gap: 2px; }
+.seg-opt { border-radius: 8px; color: var(--color-neutral-700); font-weight: 500; transition: background .2s, color .2s; }
+.seg-opt:has(input:checked) {
+  background: var(--color-seg); color: var(--color-text);
+  box-shadow: var(--shadow-md), inset 0 1px 0 var(--hl);
+}
+.card {
+  background: var(--color-raised); border: 1px solid var(--line); border-radius: 16px;
+  box-shadow: var(--shadow-sm), inset 0 1px 0 var(--hl); padding: 18px;
+}
+.card-kicker { color: var(--color-neutral-700); font-size: 12px; letter-spacing: 0; text-transform: none; font-weight: 500; }
+.table th {
+  text-transform: none; letter-spacing: 0; font-size: 12.5px; font-weight: 500;
+  color: var(--color-neutral-700); border-bottom: 1px solid var(--line); padding: 12px 10px;
+}
+.table td { border-bottom: 1px solid var(--line); padding: 12px 10px; }
+.table tbody tr:last-child td { border-bottom: 0; }
+.dialog { background: var(--color-pop); border: 1px solid var(--line); border-radius: 20px; backdrop-filter: blur(18px); }
+.dialog-backdrop { background: rgba(5,7,10,.55); backdrop-filter: blur(6px); }
+.dialog-title { font-family: inherit; font-weight: 600; letter-spacing: -.01em; }
+
+@keyframes sk { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }

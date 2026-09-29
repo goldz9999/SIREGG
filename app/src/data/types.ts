@@ -1,0 +1,63 @@
+export type Role = 'Propietario' | 'Administrador' | 'Contador' | 'Supervisor' | 'Empleado' | 'Titular';
+
+export type PageId =
+  | 'dashboard' | 'revision' | 'gastos' | 'comprobantes' | 'proveedores' | 'proyectos'
+  | 'categorias' | 'reportes' | 'usuarios' | 'empresa' | 'personal';
+
+export interface Company {
+  id: string;
+  name: string;
+  short: string;
+  initials: string;
+  role: Role;
+  color: string;
+  kind: 'Empresa' | 'Personal';
+  /** How many expenses arrive pending review in the demo data. */
+  review: number;
+}
+
+export type Status = 'proc' | 'pend' | 'info' | 'dup' | 'ok' | 'err' | 'desc';
+export type ExpenseType = 'Empresarial' | 'Personal';
+export type EvidenceKind = 'Factura' | 'Boleta' | 'Yape' | 'Plin' | 'Transferencia' | 'Foto' | 'Audio';
+export type EvidenceGroup = 'Comprobante' | 'Pago' | 'Evidencia';
+
+export interface Evidence {
+  k: EvidenceKind;
+  file: string;
+}
+
+export interface Expense {
+  id: string;
+  date: Date;
+  desc: string;
+  prov: string;
+  ruc: string;
+  cat: string;
+  type: ExpenseType;
+  proj: string;
+  pay: string;
+  amt: number;
+  st: Status;
+  user: string;
+  channel: string;
+  dupOf?: string | null;
+  ev: Evidence[];
+  op: string;
+}
+
+export interface Member {
+  name: string;
+  email: string;
+  role: Role;
+  inv: 'Aceptada' | 'Pendiente' | 'Expirada';
+  acc: 'Activa' | 'Suspendida' | '—';
+  me?: boolean;
+}
+
+export interface Notification {
+  icon: string;
+  /** 'a' = accent (info), 'a2' = accent-2 (needs attention). */
+  c: 'a' | 'a2';
+  text: string;
+  time: string;
+}
