@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/broadsheet-02023546-a095-4dc0-949b-24d519e02120/styles.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/duotone/style.css">
+<script src="_ds/broadsheet-02023546-a095-4dc0-949b-24d519e02120/_ds_bundle.js"></script>
+<style>body{margin:0;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body)}a{color:var(--color-accent-700)}a:hover{color:var(--color-accent-900)}button{font-family:inherit;transition:background-color .18s ease,box-shadow .22s ease,transform .2s cubic-bezier(.2,.8,.2,1),color .18s ease}button:active:not(:disabled){transform:scale(.97)}.card{transition:box-shadow .22s ease,transform .22s cubic-bezier(.2,.8,.2,1)}@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.theme-dark{--color-bg:#1b1a19;--color-surface:#262422;--color-text:#ecebea;--color-neutral-100:#2e2c2a;--color-neutral-200:#383533;--color-neutral-300:#45423f;--color-neutral-500:#8a8682;--color-neutral-700:#b5b1ad;--color-neutral-800:#cfccc8;--color-neutral-900:#ecebea;--color-divider:#45423f;--color-accent:#3fb3d9;--color-accent-100:#0f3440;--color-accent-200:#15495a;--color-accent-400:#5fc0e0;--color-accent-500:#3fb3d9;--color-accent-600:#6cc6e4;--color-accent-700:#8fd3ea;--color-accent-800:#b5e3f2;--color-accent-900:#c9ecf7;--color-accent-2:#ff4f9a;--color-accent-2-100:#45112a;--color-accent-2-400:#ff6aa9;--color-accent-2-500:#ff4f9a;--color-accent-2-700:#ffa3c8;--color-accent-2-800:#ffc2da;--shadow-sm:0 0 0 1px #3a3836;--shadow-md:0 0 0 1px #3a3836,0 4px 14px #0008;--shadow-lg:0 0 0 1px #3a3836,0 16px 40px #000a;color-scheme:dark}
+@keyframes sk{0%,100%{opacity:.55}50%{opacity:1}}</style>
+</helmet>
+<div class="{{ themeCls }}" style="min-height:100vh;display:flex;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body)">
+<sc-if value="{{ scrimOn }}" hint-placeholder-val="{{ false }}"><div onClick="{{ closeAll }}" style="position:fixed;inset:0;z-index:30;background:{{ scrimBg }}"></div></sc-if>
+
+<aside style="width:264px;flex:none;display:flex;flex-direction:column;gap:var(--space-4);padding:var(--space-4) var(--space-3);background:var(--color-surface);position:{{ sidePos }};top:0;bottom:0;left:0;height:100vh;box-sizing:border-box;z-index:40;transform:{{ sideTx }};transition:transform .25s cubic-bezier(.2,.8,.2,1);overflow-y:auto">
+<div style="display:flex;align-items:center;justify-content:space-between;padding:0 var(--space-2)"><div style="font-family:var(--font-heading);font-size:22px;font-weight:700;letter-spacing:.02em">SIREGG</div><sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}"><button class="btn btn-ghost btn-icon" aria-label="Cerrar menú" onClick="{{ closeAll }}"><i class="ph-duotone ph-x"></i></button></sc-if></div>
+
+<div style="position:relative;z-index:45">
+<button onClick="{{ toggleCompany }}" aria-expanded="{{ companyOpen }}" style="width:100%;display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2);background:var(--color-bg);border:0;border-radius:var(--radius-md);color:inherit;cursor:pointer;text-align:left;box-shadow:var(--shadow-sm)" style-hover="background:var(--color-neutral-100)">
+<span style="width:36px;height:36px;flex:none;display:grid;place-items:center;background:{{ co.color }};color:#fff;font-weight:700;font-size:14px;border-radius:var(--radius-md)">{{ co.initials }}</span>
+<span style="flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.2"><span style="font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ co.name }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ co.role }} · {{ co.kind }}</span></span>
+<i class="ph-duotone ph-caret-up-down" style="font-size:18px;color:var(--color-neutral-700)"></i></button>
+<sc-if value="{{ companyOpen }}" hint-placeholder-val="{{ false }}">
+<div data-pop="1" role="listbox" style="position:absolute;left:0;right:0;top:calc(100% + 6px);background:var(--color-bg);box-shadow:var(--shadow-lg);border-radius:var(--radius-md);padding:var(--space-2);display:flex;flex-direction:column;gap:2px">
+<input class="input" placeholder="Buscar organización…" value="{{ coQuery }}" onInput="{{ onCoQuery }}" style="margin-bottom:var(--space-1)">
+<div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700);padding:var(--space-1) var(--space-2)">Organizaciones</div>
+<sc-for list="{{ coList }}" as="c" hint-placeholder-count="4">
+<button onClick="{{ c.pick }}" style="display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2);border:0;background:{{ c.bg }};color:inherit;cursor:pointer;text-align:left;border-radius:var(--radius-md)" style-hover="background:var(--color-neutral-100)">
+<span style="width:28px;height:28px;flex:none;display:grid;place-items:center;background:{{ c.color }};color:#fff;font-weight:700;font-size:12px;border-radius:var(--radius-md)">{{ c.initials }}</span>
+<span style="flex:1;display:flex;flex-direction:column;line-height:1.2"><span style="font-size:14px;font-weight:600">{{ c.name }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ c.role }}</span></span>
+<sc-if value="{{ c.active }}" hint-placeholder-val="{{ false }}"><i class="ph-duotone ph-check" style="color:var(--color-accent);font-size:18px"></i></sc-if></button>
+</sc-for>
+<sc-if value="{{ coEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:var(--space-2);font-size:14px;color:var(--color-neutral-700)">Sin coincidencias.</div></sc-if>
+<div style="height:var(--space-2)"></div>
+<button onClick="{{ pickPersonal }}" style="display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2);border:0;background:{{ personalBg }};color:inherit;cursor:pointer;text-align:left;border-radius:var(--radius-md)" style-hover="background:var(--color-neutral-100)">
+<span style="width:28px;height:28px;flex:none;display:grid;place-items:center;background:var(--color-neutral-300);border-radius:var(--radius-md)"><i class="ph-duotone ph-user"></i></span>
+<span style="flex:1;font-size:14px;font-weight:600">Gastos personales</span>
+<sc-if value="{{ personalActive }}" hint-placeholder-val="{{ false }}"><i class="ph-duotone ph-check" style="color:var(--color-accent);font-size:18px"></i></sc-if></button>
+</div></sc-if></div>
+
+<nav style="display:flex;flex-direction:column;gap:var(--space-4)">
+<sc-for list="{{ navGroups }}" as="g" hint-placeholder-count="2">
+<div style="display:flex;flex-direction:column;gap:2px">
+<div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700);padding:0 var(--space-2) var(--space-1)">{{ g.label }}</div>
+<sc-for list="{{ g.items }}" as="it" hint-placeholder-count="5">
+<button onClick="{{ it.go }}" aria-current="{{ it.current }}" style="display:flex;align-items:center;gap:var(--space-2);padding:8px var(--space-2);border:0;border-radius:var(--radius-md);background:{{ it.bg }};color:{{ it.fg }};font-weight:{{ it.fw }};font-size:15px;cursor:pointer;text-align:left" style-hover="background:var(--color-neutral-100)">
+<i class="{{ it.icon }}" style="font-size:19px"></i><span style="flex:1">{{ it.label }}</span>
+<sc-if value="{{ it.badge }}" hint-placeholder-val="{{ false }}"><span class="tag tag-accent-2" style="font-size:11px">{{ it.badge }}</span></sc-if></button>
+</sc-for></div>
+</sc-for></nav>
+<div style="margin-top:auto;padding:var(--space-2);font-size:12px;color:var(--color-neutral-700);line-height:1.4"><i class="ph-duotone ph-flask"></i> Prototipo de demostración. Sin backend: los cambios no se guardan.</div>
+</aside>
+
+<div style="flex:1;min-width:0;display:flex;flex-direction:column">
+<header style="position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-4);background:var(--color-bg);box-shadow:0 1px 0 var(--color-neutral-200)">
+<sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}">
+<button class="btn btn-ghost btn-icon" aria-label="Abrir menú" onClick="{{ openDrawer }}"><i class="ph-duotone ph-list" style="font-size:22px"></i></button>
+<button onClick="{{ openDrawer }}" style="display:flex;align-items:center;gap:6px;border:0;background:transparent;color:inherit;cursor:pointer;min-height:44px;min-width:0"><span style="width:26px;height:26px;flex:none;display:grid;place-items:center;background:{{ co.color }};color:#fff;font-size:11px;font-weight:700;border-radius:var(--radius-md)">{{ co.initials }}</span><span style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:36vw">{{ co.short }}</span></button>
+</sc-if>
+<div style="flex:1;min-width:0;max-width:520px;position:relative;display:{{ searchDisplay }}"><i class="ph-duotone ph-magnifying-glass" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--color-neutral-700)"></i><input class="input" placeholder="Buscar gastos, proveedores, RUC…" onKeyDown="{{ onSearchKey }}" style="width:100%;padding-left:34px;box-sizing:border-box"></div>
+<div style="flex:1"></div>
+<sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}"><button class="btn btn-ghost btn-icon" aria-label="Buscar" onClick="{{ onSearchBtn }}"><i class="ph-duotone ph-magnifying-glass" style="font-size:20px"></i></button></sc-if>
+<div style="position:relative">
+<button class="btn btn-ghost btn-icon" aria-label="Notificaciones" onClick="{{ toggleNotif }}" style="position:relative"><i class="ph-duotone ph-bell" style="font-size:20px"></i><sc-if value="{{ notifCount }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:2px;right:2px;min-width:16px;height:16px;padding:0 3px;box-sizing:border-box;border-radius:8px;background:var(--color-accent-2);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center">{{ notifCount }}</span></sc-if></button>
+<sc-if value="{{ notifOpen }}" hint-placeholder-val="{{ false }}">
+<div data-pop="1" style="position:absolute;right:0;top:calc(100% + 6px);width:min(340px,86vw);z-index:45;background:var(--color-bg);box-shadow:var(--shadow-lg);border-radius:var(--radius-md);padding:var(--space-3);display:flex;flex-direction:column;gap:var(--space-2)">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><strong>Notificaciones</strong><span style="font-size:12px;color:var(--color-neutral-700)">{{ co.short }}</span></div>
+<sc-for list="{{ notifs }}" as="n" hint-placeholder-count="3"><div style="display:flex;gap:var(--space-2);padding:var(--space-2) 0;font-size:14px"><i class="{{ n.icon }}" style="font-size:18px;color:{{ n.color }}"></i><div style="display:flex;flex-direction:column;gap:2px"><span>{{ n.text }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ n.time }}</span></div></div></sc-for>
+<sc-if value="{{ noNotifs }}" hint-placeholder-val="{{ false }}"><div style="font-size:14px;color:var(--color-neutral-700)">Sin notificaciones en este espacio.</div></sc-if>
+</div></sc-if></div>
+<div class="seg" role="group" aria-label="Tema" style="display:{{ themeSegDisplay }}"><sc-for list="{{ themeOpts }}" as="o" hint-placeholder-count="3"><label class="seg-opt" title="{{ o.label }}" style="padding:6px 9px"><input type="radio" name="theme" checked="{{ o.on }}" onChange="{{ o.pick }}"><i class="{{ o.icon }}" style="font-size:16px"></i></label></sc-for></div>
+<div style="position:relative">
+<button onClick="{{ toggleProfile }}" aria-label="Perfil" style="width:36px;height:36px;border-radius:50%;border:0;background:var(--color-accent-100);color:var(--color-accent-900);font-weight:700;cursor:pointer">LR</button>
+<sc-if value="{{ profileOpen }}" hint-placeholder-val="{{ false }}">
+<div data-pop="1" style="position:absolute;right:0;top:calc(100% + 6px);width:260px;z-index:45;background:var(--color-bg);box-shadow:var(--shadow-lg);border-radius:var(--radius-md);padding:var(--space-3);display:flex;flex-direction:column;gap:var(--space-2)">
+<div style="display:flex;flex-direction:column;line-height:1.3"><strong>Lucía Ramírez</strong><span style="font-size:13px;color:var(--color-neutral-700)">lucia.ramirez@correo.pe</span></div>
+<div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700);margin-top:var(--space-2)">Tema</div>
+<div class="seg" style="width:100%"><sc-for list="{{ themeOpts }}" as="o" hint-placeholder-count="3"><label class="seg-opt" style="flex:1;justify-content:center"><input type="radio" name="theme-p" checked="{{ o.on }}" onChange="{{ o.pick }}">{{ o.label }}</label></sc-for></div>
+<button class="btn btn-ghost"  onClick="{{ goPersonalSettings }}" style="white-space:nowrap;justify-content:flex-start;margin-top:var(--space-2)"><i class="ph-duotone ph-gear"></i> Configuración personal</button>
+<button class="btn btn-ghost"  onClick="{{ logout }}" style="white-space:nowrap;justify-content:flex-start"><i class="ph-duotone ph-sign-out"></i> Cerrar sesión</button>
+</div></sc-if></div>
+</header>
+
+<main style="flex:1;padding:var(--space-6) var(--space-4);display:flex;flex-direction:column;gap:var(--space-6);max-width:1280px;width:100%;box-sizing:border-box">
+<div style="display:flex;flex-direction:column;gap:var(--space-1)">
+<div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">{{ co.name }} · Setiembre 2026</div>
+<h1 style="font-family:var(--font-heading);font-size:clamp(30px,4vw,44px);line-height:1.05;margin:0">{{ page.label }}</h1>
+</div>
+<sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}">
+<div aria-busy="true" style="display:flex;flex-direction:column;gap:var(--space-4)">
+<div style="font-size:14px;color:var(--color-neutral-700)"><i class="ph-duotone ph-circle-notch"></i> Cargando {{ co.name }}…</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--space-4)"><div style="height:110px;background:var(--color-neutral-100);animation:sk 1.2s infinite"></div><div style="height:110px;background:var(--color-neutral-100);animation:sk 1.2s infinite"></div><div style="height:110px;background:var(--color-neutral-100);animation:sk 1.2s infinite"></div></div>
+<div style="height:260px;background:var(--color-neutral-100);animation:sk 1.2s infinite"></div>
+</div></sc-if>
+<sc-if value="{{ showDash }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:var(--space-8)">
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2)">
+<button class="btn btn-primary" style="white-space:nowrap" onClick="{{ onRegister }}"><i class="ph-duotone ph-plus-circle"></i> Registrar gasto</button>
+<button class="btn btn-secondary" style="white-space:nowrap" onClick="{{ goReview }}"><i class="ph-duotone ph-list-checks"></i> Revisar pendientes</button>
+<button class="btn btn-ghost" style="white-space:nowrap" onClick="{{ goReports }}"><i class="ph-duotone ph-chart-bar"></i> Ver reportes</button>
+<span style="flex:1"></span><span style="font-size:13px;color:var(--color-neutral-700)">{{ dash.scope }}</span>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--space-6)">
+<sc-for list="{{ dash.kpis }}" as="k" hint-placeholder-count="3">
+<div style="display:flex;flex-direction:column;gap:var(--space-1)">
+<div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">{{ k.label }}</div>
+<div style="font-family:var(--font-heading);font-size:clamp(30px,3.4vw,42px);line-height:1.05;font-variant-numeric:tabular-nums" data-count="{{ k.raw }}">{{ k.value }}</div>
+<div style="display:flex;align-items:center;gap:6px;font-size:14px"><span style="color:{{ k.dColor }};font-weight:600">{{ k.delta }}</span><span style="color:var(--color-neutral-700)">{{ k.vs }}</span></div>
+</div></sc-for></div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:var(--space-8)">
+<div style="display:flex;flex-direction:column;gap:var(--space-3);grid-column:span {{ dash.chartSpan }}">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:var(--space-2)"><h2 style="font-family:var(--font-heading);font-size:24px;margin:0">Evolución de gastos</h2><span style="font-size:13px;color:var(--color-neutral-700)">Últimos 14 días</span></div>
+<div style="display:flex;align-items:baseline;gap:var(--space-2);flex-wrap:wrap"><span style="font-family:var(--font-heading);font-size:28px;font-variant-numeric:tabular-nums">{{ dash.hoverAmt }}</span><span style="font-size:14px;color:var(--color-neutral-700)">{{ dash.hoverLbl }}</span></div>
+<div style="display:flex;align-items:flex-end;gap:4px;height:180px">
+<sc-for list="{{ dash.days }}" as="d" hint-placeholder-count="14"><div onMouseEnter="{{ d.enter }}" onMouseLeave="{{ dayLeave }}" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;cursor:pointer"><div data-grow="y" style="height:{{ d.h }};background:{{ d.c }};border-radius:2px 2px 0 0;transform-origin:bottom;transition:background-color .2s ease"></div></div></sc-for>
+</div>
+<div style="display:flex;gap:4px;font-size:11px;color:var(--color-neutral-700)"><sc-for list="{{ dash.days }}" as="d" hint-placeholder-count="14"><span style="flex:1;text-align:center">{{ d.lbl }}</span></sc-for></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:var(--space-3)">
+<div style="display:flex;align-items:baseline;justify-content:space-between"><h2 style="font-family:var(--font-heading);font-size:24px;margin:0">Por categoría</h2><span style="font-size:13px;color:var(--color-neutral-700)">Setiembre</span></div>
+<sc-for list="{{ dash.cats }}" as="c" hint-placeholder-count="6">
+<div style="display:flex;flex-direction:column;gap:4px"><div style="display:flex;justify-content:space-between;font-size:14px"><span>{{ c.name }}</span><span style="font-variant-numeric:tabular-nums;color:var(--color-neutral-800)">{{ c.amt }} · {{ c.pct }}</span></div><div style="height:6px;background:var(--color-neutral-100)"><div data-grow="x" style="height:100%;width:{{ c.pct }};background:{{ c.color }};transform-origin:left"></div></div></div>
+</sc-for>
+<div style="display:flex;flex-direction:column;gap:var(--space-2);margin-top:var(--space-3)">
+<div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">Empresarial y personal</div>
+<div style="display:flex;height:10px"><div data-grow="x" style="width:{{ dash.bizPct }};background:var(--color-accent);transform-origin:left"></div><div style="flex:1;background:var(--color-neutral-300)"></div></div>
+<div style="display:flex;justify-content:space-between;font-size:14px"><span><span style="color:var(--color-accent)">■</span> Empresarial {{ dash.bizPct }}</span><span><span style="color:var(--color-neutral-500)">■</span> Personal {{ dash.perPct }}</span></div>
+</div></div></div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:var(--space-8)">
+<div style="display:flex;flex-direction:column;gap:var(--space-2)">
+<div style="display:flex;align-items:baseline;justify-content:space-between"><h2 style="font-family:var(--font-heading);font-size:24px;margin:0">Requieren tu atención</h2><button class="btn btn-ghost" style="white-space:nowrap" onClick="{{ goReview }}">Ver todo</button></div>
+<sc-for list="{{ dash.review }}" as="r" hint-placeholder-count="3">
+<button onClick="{{ r.go }}" style="display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2);margin:0 calc(var(--space-2) * -1);border:0;background:transparent;color:inherit;text-align:left;cursor:pointer;border-radius:var(--radius-md);min-height:52px" data-a="1" style-hover="background:var(--color-neutral-100)">
+<i class="{{ r.icon }}" style="font-size:22px;color:{{ r.iColor }}"></i>
+<span style="flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3"><span style="font-weight:600;font-size:15px">{{ r.title }}</span><span style="font-size:13px;color:var(--color-neutral-700)">{{ r.sub }}</span></span>
+<span class="{{ r.tagCls }}">{{ r.status }}</span></button>
+</sc-for>
+<sc-if value="{{ dash.noReview }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:var(--space-2);padding:var(--space-3) 0;color:var(--color-neutral-700)"><i class="ph-duotone ph-check-circle" style="font-size:22px;color:var(--color-accent)"></i> Todo revisado. No hay pendientes ni duplicados.</div></sc-if>
+</div>
+<div style="display:flex;flex-direction:column;gap:var(--space-2)">
+<div style="display:flex;align-items:baseline;justify-content:space-between"><h2 style="font-family:var(--font-heading);font-size:24px;margin:0">Gastos recientes</h2><button class="btn btn-ghost" style="white-space:nowrap" onClick="{{ goGastos }}">Ver gastos</button></div>
+<sc-for list="{{ dash.recent }}" as="t" hint-placeholder-count="5">
+<button onClick="{{ goGastos }}" style="display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2);margin:0 calc(var(--space-2) * -1);border:0;background:transparent;color:inherit;text-align:left;cursor:pointer;border-radius:var(--radius-md);min-height:52px" data-a="1" style-hover="background:var(--color-neutral-100)">
+<span style="width:44px;flex:none;font-size:13px;color:var(--color-neutral-700)">{{ t.date }}</span>
+<span style="flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3"><span style="font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.desc }}</span><span style="font-size:13px;color:var(--color-neutral-700)">{{ t.prov }} · {{ t.cat }}</span></span>
+<span style="font-variant-numeric:tabular-nums;font-weight:600">{{ t.amt }}</span></button>
+</sc-for></div></div>
+<p style="margin:0;font-size:13px;color:var(--color-neutral-700)"><i class="ph-duotone ph-flask"></i> Datos ficticios de demostración para {{ co.name }}.</p>
+</div></sc-if>
+<sc-if value="{{ showList }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:var(--space-4)">
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2)">
+<div class="seg"><sc-for list="{{ gTabs }}" as="tb" hint-placeholder-count="2"><label class="seg-opt" style="white-space:nowrap"><input type="radio" name="gtab" checked="{{ tb.on }}" onChange="{{ tb.pick }}"><span>{{ tb.label }}</span></label></sc-for></div>
+<span style="flex:1"></span>
+<button class="btn btn-primary" style="white-space:nowrap" onClick="{{ onRegister }}"><i class="ph-duotone ph-plus-circle"></i> Registrar gasto</button>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center">
+<div style="position:relative;flex:1 1 240px;max-width:360px"><i class="ph-duotone ph-magnifying-glass" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--color-neutral-700)"></i><input class="input" placeholder="Buscar descripción, proveedor, RUC…" value="{{ gq }}" onInput="{{ onGq }}" style="width:100%;padding-left:34px;box-sizing:border-box"></div>
+<sc-for list="{{ gFilters }}" as="f" hint-placeholder-count="4"><select class="input" data-v="{{ f.value }}" aria-label="{{ f.label }}" onChange="{{ f.set }}" style="width:auto;flex:0 1 170px;min-width:130px"><sc-for list="{{ f.opts }}" as="o" hint-placeholder-count="3"><option value="{{ o.v }}" selected="{{ o.sel }}">{{ o.l }}</option></sc-for></select></sc-for>
+<sc-if value="{{ gHasFilters }}" hint-placeholder-val="{{ false }}"><button class="btn btn-ghost" style="white-space:nowrap" onClick="{{ clearFilters }}"><i class="ph-duotone ph-x"></i> Limpiar</button></sc-if>
+</div>
+<div style="font-size:13px;color:var(--color-neutral-700)">{{ gCountLabel }}</div>
+<sc-if value="{{ gTable }}" hint-placeholder-val="{{ true }}">
+<div style="overflow-x:auto"><table class="table" style="width:100%;min-width:1080px">
+<thead><tr><sc-for list="{{ gCols }}" as="c" hint-placeholder-count="9"><th style="text-align:{{ c.align }};white-space:nowrap"><button onClick="{{ c.sort }}" style="border:0;background:transparent;color:inherit;font:inherit;font-weight:600;cursor:{{ c.cursor }};padding:0;display:inline-flex;gap:4px;align-items:center"><span>{{ c.label }}</span><span style="color:var(--color-accent)">{{ c.arrow }}</span></button></th></sc-for></tr></thead>
+<tbody><sc-for list="{{ gRows }}" as="e" hint-placeholder-count="10">
+<tr onClick="{{ e.open }}" style="cursor:pointer;background:{{ e.rowBg }}" style-hover="background:var(--color-neutral-100)">
+<td style="white-space:nowrap">{{ e.dateL }}</td><td style="max-width:240px"><span style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ e.desc }}</span></td><td style="white-space:nowrap">{{ e.prov }}</td><td>{{ e.cat }}</td><td>{{ e.type }}</td><td style="max-width:180px"><span style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--color-neutral-800)">{{ e.projL }}</span></td><td>{{ e.pay }}</td><td style="text-align:right;font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap">{{ e.amtL }}</td><td><span class="{{ e.stCls }}" style="white-space:nowrap">{{ e.stL }}</span></td></tr>
+</sc-for></tbody></table></div></sc-if>
+<sc-if value="{{ gCards }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:var(--space-1)"><sc-for list="{{ gRows }}" as="e" hint-placeholder-count="6">
+<button onClick="{{ e.open }}" style="display:flex;flex-direction:column;gap:6px;padding:var(--space-3);border:0;background:var(--color-surface);color:inherit;text-align:left;cursor:pointer;border-radius:var(--radius-md)">
+<span style="display:flex;justify-content:space-between;gap:var(--space-2);width:100%"><span style="font-weight:600;font-size:15px">{{ e.desc }}</span><span style="font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap">{{ e.amtL }}</span></span>
+<span style="font-size:13px;color:var(--color-neutral-700)">{{ e.prov }} · {{ e.dateL }} · {{ e.pay }}</span>
+<span class="{{ e.stCls }}">{{ e.stL }}</span></button>
+</sc-for></div></sc-if>
+<sc-if value="{{ gEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:var(--space-6) 0;display:flex;flex-direction:column;gap:var(--space-2)"><strong style="font-size:18px">No hay gastos que coincidan.</strong><span style="color:var(--color-neutral-700)">Prueba con otra búsqueda o limpia los filtros.</span></div></sc-if>
+<div style="display:flex;align-items:center;gap:var(--space-2);justify-content:flex-end"><span style="font-size:13px;color:var(--color-neutral-700)">{{ gPageLabel }}</span><button class="btn btn-secondary btn-icon" aria-label="Página anterior" disabled="{{ gPrevDis }}" onClick="{{ gPrev }}"><i class="ph-duotone ph-caret-left"></i></button><button class="btn btn-secondary btn-icon" aria-label="Página siguiente" disabled="{{ gNextDis }}" onClick="{{ gNext }}"><i class="ph-duotone ph-caret-right"></i></button></div>
+</div></sc-if>
+
+<sc-if value="{{ showRev }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:var(--space-4)">
+<div data-a="1" style="display:flex;flex-direction:column;gap:var(--space-2);max-width:760px"><div style="display:flex;justify-content:space-between;gap:var(--space-3);flex-wrap:wrap;font-size:14px"><strong>{{ rev.progressLbl }}</strong><span style="color:var(--color-neutral-700)">{{ rev.hint }}</span></div><div style="height:6px;background:var(--color-neutral-100);border-radius:3px;overflow:hidden"><div style="height:100%;width:{{ rev.pct }};background:var(--color-accent);transition:width .6s cubic-bezier(.2,.8,.2,1)"></div></div></div>
+<div data-a="1" style="display:flex;flex-wrap:wrap;gap:var(--space-2)"><sc-for list="{{ rev.chips }}" as="c" hint-placeholder-count="5"><button onClick="{{ c.pick }}" aria-pressed="{{ c.on }}" style="border:0;cursor:pointer;padding:6px 14px;min-height:36px;border-radius:18px;font-size:14px;white-space:nowrap;background:{{ c.bg }};color:{{ c.fg }}">{{ c.label }}</button></sc-for></div>
+<div style="display:flex;gap:var(--space-3);overflow-x:auto;padding:4px 2px var(--space-3);scroll-snap-type:x mandatory"><sc-for list="{{ rev.queue }}" as="q" hint-placeholder-count="5"><button data-a="1" onClick="{{ q.open }}" style="flex:0 0 230px;scroll-snap-align:start;display:flex;flex-direction:column;gap:6px;padding:var(--space-3);border:0;border-radius:var(--radius-lg);background:{{ q.bg }};box-shadow:{{ q.ring }};color:inherit;text-align:left;cursor:pointer" style-hover="transform:translateY(-3px)"><span class="{{ q.stCls }}" style="align-self:flex-start;white-space:nowrap">{{ q.stL }}</span><span style="font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%">{{ q.prov }}</span><span style="display:flex;justify-content:space-between;width:100%;font-size:13px;color:var(--color-neutral-800)"><span>{{ q.dateL }}</span><span style="font-variant-numeric:tabular-nums;font-weight:600">{{ q.amtL }}</span></span></button></sc-for></div>
+<sc-if value="{{ rev.empty }}" hint-placeholder-val="{{ false }}"><div data-a="1" style="display:flex;flex-direction:column;align-items:flex-start;gap:var(--space-3);padding:var(--space-8) 0"><i class="ph-duotone ph-confetti" style="font-size:56px;color:var(--color-accent)"></i><h2 style="font-family:var(--font-heading);font-size:32px;margin:0">Todo revisado</h2><p style="margin:0;color:var(--color-neutral-800)">No quedan gastos en esta bandeja para {{ co.name }}.</p><button class="btn btn-secondary" style="white-space:nowrap" onClick="{{ goDash }}">Volver al dashboard</button></div></sc-if>
+</div></sc-if>
+<sc-if value="{{ showDetail }}" hint-placeholder-val="{{ false }}">
+<div data-detail="1" style="display:flex;flex-direction:column;gap:var(--space-6)">
+<sc-if value="{{ d.showBack }}" hint-placeholder-val="{{ true }}"><div><button class="btn btn-ghost" style="white-space:nowrap" onClick="{{ backToList }}"><i class="ph-duotone ph-arrow-left"></i> Volver a gastos</button></div></sc-if>
+<div style="display:flex;flex-direction:column;gap:var(--space-2)">
+<div style="display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center"><span class="{{ d.stCls }}">{{ d.stL }}</span><span style="font-size:13px;color:var(--color-neutral-700)">{{ d.id }} · {{ d.channel }}</span></div>
+<h2 style="font-family:var(--font-heading);font-size:clamp(26px,3vw,34px);margin:0;line-height:1.15">{{ d.desc }}</h2>
+<div style="font-family:var(--font-heading);font-size:clamp(34px,4vw,48px);line-height:1;font-variant-numeric:tabular-nums">{{ d.amtL }} <span style="font-size:16px;color:var(--color-neutral-700)">PEN</span></div>
+<div style="font-size:15px;color:var(--color-neutral-800)">{{ d.prov }} · {{ d.dateL }} · Registrado por {{ d.user }}</div>
+</div>
+<sc-if value="{{ d.banner }}" hint-placeholder-val="{{ false }}"><div role="status" style="display:flex;gap:var(--space-3);align-items:flex-start;padding:var(--space-3) var(--space-4);background:{{ d.bannerBg }};border-radius:var(--radius-md);max-width:760px"><i class="{{ d.bannerIcon }}" style="font-size:22px;color:{{ d.bannerColor }}"></i><div style="display:flex;flex-direction:column;gap:2px"><strong>{{ d.bannerTitle }}</strong><span style="font-size:14px">{{ d.bannerText }}</span></div></div></sc-if>
+<div style="display:flex;flex-wrap:wrap;gap:var(--space-2)"><sc-for list="{{ d.actions }}" as="a" hint-placeholder-count="2"><button class="{{ a.cls }}" onClick="{{ a.run }}" style="color:{{ a.color }}"><i class="{{ a.icon }}"></i> {{ a.label }}</button></sc-for></div>
+
+<sc-if value="{{ d.isDup }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:var(--space-3)"><h3 style="font-family:var(--font-heading);font-size:22px;margin:0">Comparación con el gasto existente</h3>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:var(--space-4);max-width:760px">
+<sc-for list="{{ d.dupCols }}" as="dc" hint-placeholder-count="2"><div style="display:flex;flex-direction:column;gap:6px;padding:var(--space-3);background:{{ dc.bg }};border-radius:var(--radius-md)"><div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">{{ dc.title }}</div><sc-for list="{{ dc.rows }}" as="r" hint-placeholder-count="5"><div style="display:flex;justify-content:space-between;gap:var(--space-2);font-size:14px"><span style="color:var(--color-neutral-700)">{{ r.l }}</span><span style="font-weight:600;text-align:right">{{ r.v }}</span></div></sc-for></div></sc-for>
+</div></div></sc-if>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:var(--space-8)">
+<div style="display:flex;flex-direction:column;gap:var(--space-3)">
+<h3 style="font-family:var(--font-heading);font-size:22px;margin:0">Datos del gasto</h3>
+<sc-if value="{{ d.viewMode }}" hint-placeholder-val="{{ true }}">
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-3) var(--space-4)"><sc-for list="{{ d.fields }}" as="fl" hint-placeholder-count="8"><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--color-neutral-700)">{{ fl.l }}</span><span style="font-size:15px;color:{{ fl.color }}">{{ fl.v }}</span></div></sc-for></div>
+</sc-if>
+<sc-if value="{{ d.editMode }}" hint-placeholder-val="{{ false }}">
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-3)"><sc-for list="{{ d.inputs }}" as="fi" hint-placeholder-count="8"><div class="field" style="grid-column:span {{ fi.span }}"><label>{{ fi.l }}</label>
+<sc-if value="{{ fi.isText }}" hint-placeholder-val="{{ true }}"><input class="input" value="{{ fi.value }}" onInput="{{ fi.set }}" style="box-shadow:{{ fi.ring }}"></sc-if>
+<sc-if value="{{ fi.isSel }}" hint-placeholder-val="{{ false }}"><select class="input" data-v="{{ fi.value }}" onChange="{{ fi.set }}"><sc-for list="{{ fi.opts }}" as="o" hint-placeholder-count="3"><option value="{{ o.v }}" selected="{{ o.sel }}">{{ o.v }}</option></sc-for></select></sc-if>
+</div></sc-for></div>
+</sc-if>
+</div>
+<div style="display:flex;flex-direction:column;gap:var(--space-6)">
+<div style="display:flex;flex-direction:column;gap:var(--space-2)"><h3 style="font-family:var(--font-heading);font-size:22px;margin:0">Comprobantes y evidencias</h3>
+<sc-for list="{{ d.files }}" as="fx" hint-placeholder-count="2"><button onClick="{{ fx.open }}" style="display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2);margin:0 calc(var(--space-2) * -1);border:0;background:transparent;color:inherit;text-align:left;cursor:pointer;border-radius:var(--radius-md);min-height:48px" data-a="1" style-hover="background:var(--color-neutral-100)"><i class="{{ fx.icon }}" style="font-size:22px;color:var(--color-accent)"></i><span style="flex:1;display:flex;flex-direction:column;line-height:1.3"><span style="font-size:15px">{{ fx.k }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ fx.file }}</span></span><span class="{{ fx.gCls }}">{{ fx.group }}</span></button></sc-for>
+<sc-if value="{{ d.noFiles }}" hint-placeholder-val="{{ false }}"><span style="font-size:14px;color:var(--color-neutral-700)">Registrado por mensaje de texto, sin archivos adjuntos.</span></sc-if></div>
+<div style="display:flex;flex-direction:column;gap:var(--space-2)"><h3 style="font-family:var(--font-heading);font-size:22px;margin:0">Extracción IA</h3>
+<sc-for list="{{ d.ai }}" as="ai" hint-placeholder-count="5"><div style="display:grid;grid-template-columns:100px minmax(0,1fr) 44px;gap:var(--space-2);align-items:center;font-size:14px"><span>{{ ai.l }}</span><div style="height:6px;background:var(--color-neutral-100)"><div data-grow="x" style="height:100%;width:{{ ai.w }};background:{{ ai.c }};transform-origin:left"></div></div><span style="text-align:right;font-variant-numeric:tabular-nums;color:{{ ai.tc }}">{{ ai.pct }}</span></div></sc-for>
+<span style="font-size:13px;color:var(--color-neutral-700)">{{ d.aiNote }}</span></div>
+<div style="display:flex;flex-direction:column;gap:var(--space-2)"><h3 style="font-family:var(--font-heading);font-size:22px;margin:0">Historial</h3>
+<sc-for list="{{ d.log }}" as="lg" hint-placeholder-count="3"><div style="display:flex;gap:var(--space-3);font-size:14px"><span style="width:92px;flex:none;color:var(--color-neutral-700)">{{ lg.t }}</span><span>{{ lg.x }}</span></div></sc-for></div>
+</div></div></div></sc-if>
+
+<sc-if value="{{ showFiles }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:var(--space-4)">
+<div style="display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center">
+<div class="seg"><sc-for list="{{ fGroups }}" as="fg" hint-placeholder-count="4"><label class="seg-opt" style="white-space:nowrap"><input type="radio" name="fgroup" checked="{{ fg.on }}" onChange="{{ fg.pick }}"><i class="{{ fg.icon }}"></i><span>{{ fg.label }}</span></label></sc-for></div>
+<div style="position:relative;flex:1 1 220px;max-width:320px"><i class="ph-duotone ph-magnifying-glass" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--color-neutral-700)"></i><input class="input" placeholder="Buscar proveedor o archivo…" value="{{ fq }}" onInput="{{ onFq }}" style="width:100%;padding-left:34px;box-sizing:border-box"></div>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:var(--space-4);font-size:13px;color:var(--color-neutral-700)"><span><span class="tag tag-accent">Comprobante</span> factura o boleta con valor tributario</span><span><span class="tag tag-neutral">Pago</span> constancia de Yape, Plin o transferencia</span><span><span class="tag tag-outline">Evidencia</span> foto o audio de respaldo</span></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:var(--space-4)">
+<sc-for list="{{ fList }}" as="fx" hint-placeholder-count="8">
+<button onClick="{{ fx.open }}" class="card" style="display:flex;flex-direction:column;gap:var(--space-2);text-align:left;cursor:pointer;border:0;color:inherit;font:inherit;padding:var(--space-3)" style-hover="box-shadow:var(--shadow-md);transform:translateY(-3px)">
+<span style="height:96px;display:grid;place-items:center;background:var(--color-bg);border-radius:var(--radius-md)"><i class="{{ fx.icon }}" style="font-size:40px;color:{{ fx.iColor }}"></i></span>
+<span style="display:flex;justify-content:space-between;align-items:center;gap:var(--space-2)"><span class="{{ fx.gCls }}">{{ fx.group }}</span><span style="font-size:13px;color:var(--color-neutral-700)">{{ fx.k }}</span></span>
+<span style="font-weight:600;font-size:15px">{{ fx.prov }}</span>
+<span style="display:flex;justify-content:space-between;font-size:13px;color:var(--color-neutral-800)"><span>{{ fx.dateL }}</span><span style="font-variant-numeric:tabular-nums">{{ fx.amtL }}</span></span>
+</button></sc-for></div>
+<sc-if value="{{ fEmpty }}" hint-placeholder-val="{{ false }}"><div style="color:var(--color-neutral-700)">No hay archivos con estos filtros.</div></sc-if>
+</div></sc-if>
+
+<sc-if value="{{ showProv }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:var(--space-4)">
+<div style="position:relative;max-width:360px"><i class="ph-duotone ph-magnifying-glass" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--color-neutral-700)"></i><input class="input" placeholder="Buscar proveedor o RUC…" value="{{ pq }}" onInput="{{ onPq }}" style="width:100%;padding-left:34px;box-sizing:border-box"></div>
+<sc-if value="{{ gTable }}" hint-placeholder-val="{{ true }}">
+<div style="overflow-x:auto"><table class="table" style="width:100%;min-width:820px"><thead><tr><th>Proveedor</th><th>RUC</th><th style="text-align:right">Gastos</th><th style="text-align:right">Total de compras</th><th>Última operación</th><th>Clasificación habitual</th><th></th></tr></thead>
+<tbody><sc-for list="{{ provs }}" as="p" hint-placeholder-count="6"><tr><td style="font-weight:600">{{ p.name }}</td><td style="font-variant-numeric:tabular-nums;color:var(--color-neutral-800)">{{ p.rucL }}</td><td style="text-align:right">{{ p.n }}</td><td style="text-align:right;font-variant-numeric:tabular-nums;font-weight:600">{{ p.totalL }}</td><td>{{ p.lastL }}</td><td><span class="tag tag-outline">{{ p.cat }}</span></td><td style="text-align:right"><button class="btn btn-ghost" style="white-space:nowrap" onClick="{{ p.history }}">Historial</button></td></tr></sc-for></tbody></table></div></sc-if>
+<sc-if value="{{ gCards }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:var(--space-1)"><sc-for list="{{ provs }}" as="p" hint-placeholder-count="5"><button onClick="{{ p.history }}" style="display:flex;flex-direction:column;gap:4px;padding:var(--space-3);border:0;background:var(--color-surface);color:inherit;text-align:left;cursor:pointer;border-radius:var(--radius-md)"><span style="display:flex;justify-content:space-between;width:100%;gap:var(--space-2)"><strong>{{ p.name }}</strong><span style="font-variant-numeric:tabular-nums;font-weight:600">{{ p.totalL }}</span></span><span style="font-size:13px;color:var(--color-neutral-700)">RUC {{ p.rucL }} · {{ p.n }} gastos · {{ p.cat }}</span></button></sc-for></div></sc-if>
+</div></sc-if>
+
+<sc-if value="{{ showProj }}" hint-placeholder-val="{{ false }}">
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:var(--space-4)">
+<sc-for list="{{ projs }}" as="pj" hint-placeholder-count="3">
+<button onClick="{{ pj.open }}" class="card" style="display:flex;flex-direction:column;gap:var(--space-3);text-align:left;cursor:pointer;border:0;color:inherit;font:inherit" style-hover="box-shadow:var(--shadow-md);transform:translateY(-3px)">
+<span class="card-kicker">{{ pj.kind }}</span><span class="card-title" style="font-size:20px">{{ pj.name }}</span>
+<span style="font-family:var(--font-heading);font-size:30px;font-variant-numeric:tabular-nums">{{ pj.costL }}</span>
+<span style="display:flex;height:8px;width:100%"><sc-for list="{{ pj.segs }}" as="sg" hint-placeholder-count="3"><span title="{{ sg.tip }}" style="width:{{ sg.w }};background:{{ sg.c }}"></span></sc-for></span>
+<span class="card-meta">{{ pj.n }} gastos · última operación {{ pj.lastL }}</span>
+</button></sc-for></div>
+<sc-if value="{{ noProjs }}" hint-placeholder-val="{{ false }}"><div style="color:var(--color-neutral-700)">Esta organización aún no tiene proyectos con gastos.</div></sc-if>
+</sc-if>
+
+<sc-if value="{{ showProjDetail }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:var(--space-6)">
+<div><button class="btn btn-ghost" style="white-space:nowrap" onClick="{{ backToProjs }}"><i class="ph-duotone ph-arrow-left"></i> Volver a proyectos</button></div>
+<div style="display:flex;flex-direction:column;gap:var(--space-1)"><span style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">{{ pd.kind }}</span><h2 style="font-family:var(--font-heading);font-size:clamp(26px,3vw,34px);margin:0">{{ pd.name }}</h2></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:var(--space-6)"><sc-for list="{{ pd.kpis }}" as="k" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">{{ k.l }}</span><span style="font-family:var(--font-heading);font-size:32px;font-variant-numeric:tabular-nums">{{ k.v }}</span></div></sc-for></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:var(--space-8)">
+<div style="display:flex;flex-direction:column;gap:var(--space-3)"><h3 style="font-family:var(--font-heading);font-size:22px;margin:0">Categorías de gasto</h3>
+<sc-for list="{{ pd.cats }}" as="c" hint-placeholder-count="4"><div style="display:flex;flex-direction:column;gap:4px"><div style="display:flex;justify-content:space-between;font-size:14px"><span>{{ c.name }}</span><span style="font-variant-numeric:tabular-nums">{{ c.amt }} · {{ c.pct }}</span></div><div style="height:6px;background:var(--color-neutral-100)"><div data-grow="x" style="height:100%;width:{{ c.pct }};background:{{ c.color }};transform-origin:left"></div></div></div></sc-for></div>
+<div style="display:flex;flex-direction:column;gap:var(--space-2);grid-column:span 1"><h3 style="font-family:var(--font-heading);font-size:22px;margin:0">Historial de operaciones</h3>
+<sc-for list="{{ pd.rows }}" as="e" hint-placeholder-count="5"><button onClick="{{ e.open }}" style="display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2);margin:0 calc(var(--space-2) * -1);border:0;background:transparent;color:inherit;text-align:left;cursor:pointer;border-radius:var(--radius-md);min-height:48px" data-a="1" style-hover="background:var(--color-neutral-100)"><span style="width:48px;flex:none;font-size:13px;color:var(--color-neutral-700)">{{ e.dateL }}</span><span style="flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3"><span style="font-size:15px">{{ e.desc }}</span><span style="font-size:13px;color:var(--color-neutral-700)">{{ e.prov }} · {{ e.user }}</span></span><span style="font-variant-numeric:tabular-nums;font-weight:600">{{ e.amtL }}</span></button></sc-for></div>
+</div></div></sc-if>
+
+<sc-if value="{{ pv }}" hint-placeholder-val="{{ false }}">
+<div class="dialog-backdrop" onClick="{{ closePreview }}" style="position:fixed;inset:0;z-index:70;display:grid;place-items:center;padding:var(--space-4)">
+<div data-pop="1" class="dialog" role="dialog" aria-modal="true" onClick="{{ stop }}" style="width:min(520px,100%);max-height:90vh;overflow:auto;display:flex;flex-direction:column;gap:var(--space-4)">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:var(--space-2)"><div style="display:flex;gap:var(--space-2);align-items:center"><span class="{{ pv.gCls }}">{{ pv.group }}</span><strong>{{ pv.k }}</strong></div><button class="btn btn-ghost btn-icon" aria-label="Cerrar" onClick="{{ closePreview }}"><i class="ph-duotone ph-x"></i></button></div>
+<sc-if value="{{ pv.isDoc }}" hint-placeholder-val="{{ false }}"><div style="background:var(--color-bg);box-shadow:var(--shadow-sm);padding:var(--space-6) var(--space-4);display:flex;flex-direction:column;gap:6px;text-align:center;font-size:14px"><strong style="font-size:17px">{{ pv.prov }}</strong><span>RUC {{ pv.rucL }}</span><span style="letter-spacing:.08em;text-transform:uppercase;font-size:12px;margin-top:var(--space-2)">{{ pv.docTitle }}</span><span>{{ pv.docNum }} · {{ pv.dateL }}</span><div style="display:flex;justify-content:space-between;margin-top:var(--space-3);text-align:left"><span>{{ pv.desc }}</span><span style="font-variant-numeric:tabular-nums">{{ pv.amtL }}</span></div><div style="display:flex;justify-content:space-between;font-weight:700;border-top:1px dashed var(--color-neutral-500);padding-top:6px"><span>TOTAL</span><span style="font-variant-numeric:tabular-nums">{{ pv.amtL }}</span></div></div></sc-if>
+<sc-if value="{{ pv.isPay }}" hint-placeholder-val="{{ false }}"><div style="background:var(--color-bg);box-shadow:var(--shadow-sm);padding:var(--space-6) var(--space-4);display:flex;flex-direction:column;gap:6px;align-items:center;text-align:center"><i class="ph-duotone ph-check-circle" style="font-size:36px;color:var(--color-accent)"></i><span>Pago enviado por {{ pv.k }}</span><span style="font-family:var(--font-heading);font-size:40px;font-variant-numeric:tabular-nums">{{ pv.amtL }}</span><span>a {{ pv.prov }}</span><span style="font-size:13px;color:var(--color-neutral-700)">{{ pv.dateL }} · Operación {{ pv.op }}</span></div></sc-if>
+<sc-if value="{{ pv.isPhoto }}" hint-placeholder-val="{{ false }}"><div style="height:220px;display:grid;place-items:center;background:var(--color-neutral-200);text-align:center;padding:var(--space-4)"><span style="display:flex;flex-direction:column;align-items:center;gap:var(--space-2);color:var(--color-neutral-800)"><i class="ph-duotone ph-camera" style="font-size:40px"></i>Fotografía enviada por Telegram. La imagen real no está disponible en esta demostración.</span></div></sc-if>
+<sc-if value="{{ pv.isAudio }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:var(--space-3)"><div style="display:flex;align-items:center;gap:3px;height:48px"><i class="ph-duotone ph-play-circle" style="font-size:32px;color:var(--color-accent);margin-right:var(--space-2)"></i><sc-for list="{{ wave }}" as="wv" hint-placeholder-count="40"><span style="flex:1;height:{{ wv }};background:var(--color-neutral-500)"></span></sc-for></div><div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">Transcripción IA</div><p style="margin:0;font-style:italic">“{{ pv.transcript }}”</p></div></sc-if>
+<div style="font-size:13px;color:var(--color-neutral-700)">{{ pv.file }} · recibido por {{ pv.channel }}</div>
+<div class="dialog-actions" style="display:flex;justify-content:flex-end;gap:var(--space-2)"><button class="btn btn-ghost" style="white-space:nowrap" onClick="{{ closePreview }}">Cerrar</button><sc-if value="{{ pv.canGo }}" hint-placeholder-val="{{ true }}"><button class="btn btn-primary" style="white-space:nowrap" onClick="{{ pv.go }}">Ver gasto relacionado</button></sc-if></div>
+</div></div></sc-if>
+
+<sc-if value="{{ showCats }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:var(--space-4);max-width:900px">
+<p style="margin:0;color:var(--color-neutral-800);max-width:62ch">La IA usa estas categorías y los proveedores habituales para clasificar cada gasto de {{ co.name }}. Las inactivas no se sugieren.</p>
+<div style="display:flex;flex-wrap:wrap;gap:var(--space-2);max-width:520px"><input class="input" placeholder="Nueva categoría" value="{{ newCat }}" onInput="{{ onNewCat }}" onKeyDown="{{ onNewCatKey }}" style="flex:1 1 220px"><button class="btn btn-primary" style="white-space:nowrap" onClick="{{ addCat }}" disabled="{{ addCatDis }}"><i class="ph-duotone ph-plus"></i> Agregar</button></div>
+<div style="display:flex;flex-direction:column">
+<sc-for list="{{ catRows }}" as="c" hint-placeholder-count="6">
+<div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--space-3);align-items:center;padding:var(--space-3) 0;box-shadow:0 1px 0 var(--color-neutral-200);opacity:{{ c.op }}" data-a="1">
+<div style="display:flex;flex-direction:column;gap:4px;min-width:0"><span style="display:flex;gap:var(--space-2);align-items:center;flex-wrap:wrap"><strong style="font-size:16px">{{ c.name }}</strong><sc-if value="{{ c.isNew }}" hint-placeholder-val="{{ false }}"><span class="tag tag-accent">Nueva · demo</span></sc-if></span><span style="font-size:13px;color:var(--color-neutral-700)">{{ c.meta }}</span><span style="font-size:13px;color:var(--color-neutral-800)"><i class="ph-duotone ph-sparkle" style="color:var(--color-accent)"></i> {{ c.rule }}</span></div>
+<label style="display:flex;align-items:center;gap:var(--space-2);font-size:14px;cursor:pointer;min-height:44px"><input type="checkbox" checked="{{ c.on }}" onChange="{{ c.toggle }}" style="width:18px;height:18px;accent-color:var(--color-accent)"><span>Activa</span></label>
+</div></sc-for></div></div></sc-if>
+
+<sc-if value="{{ showRep }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:var(--space-6)">
+<div style="display:flex;flex-wrap:wrap;gap:var(--space-3);align-items:center">
+<div class="seg"><sc-for list="{{ rRanges }}" as="o" hint-placeholder-count="3"><label class="seg-opt" style="white-space:nowrap"><input type="radio" name="rrange" checked="{{ o.on }}" onChange="{{ o.pick }}"><span>{{ o.label }}</span></label></sc-for></div>
+<span style="flex:1"></span>
+<sc-for list="{{ rExports }}" as="x" hint-placeholder-count="3"><button class="btn btn-secondary" style="white-space:nowrap" onClick="{{ x.run }}"><i class="{{ x.icon }}"></i> {{ x.label }}</button></sc-for>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:var(--space-6)"><sc-for list="{{ rKpis }}" as="k" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">{{ k.l }}</span><span style="font-family:var(--font-heading);font-size:clamp(28px,3vw,38px);font-variant-numeric:tabular-nums">{{ k.v }}</span></div></sc-for></div>
+<div style="display:flex;flex-direction:column;gap:var(--space-3)">
+<div style="display:flex;flex-wrap:wrap;gap:var(--space-2)"><sc-for list="{{ rDims }}" as="o" hint-placeholder-count="7"><button onClick="{{ o.pick }}" aria-pressed="{{ o.on }}" style="border:0;cursor:pointer;padding:6px 12px;min-height:36px;border-radius:var(--radius-md);font-size:14px;white-space:nowrap;background:{{ o.bg }};color:{{ o.fg }}" style-hover="background:var(--color-accent-100)">{{ o.label }}</button></sc-for></div>
+<h2 style="font-family:var(--font-heading);font-size:24px;margin:0">{{ rTitle }}</h2>
+<sc-if value="{{ rIsPeriod }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;align-items:flex-end;gap:4px;height:200px"><sc-for list="{{ rBars }}" as="b" hint-placeholder-count="14"><div title="{{ b.tip }}" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%"><div data-grow="y" style="height:{{ b.h }};background:var(--color-accent);border-radius:2px 2px 0 0;transform-origin:bottom"></div></div></sc-for></div>
+<div style="display:flex;gap:4px;font-size:11px;color:var(--color-neutral-700)"><sc-for list="{{ rBars }}" as="b" hint-placeholder-count="14"><span style="flex:1;text-align:center">{{ b.lbl }}</span></sc-for></div>
+</sc-if>
+<sc-if value="{{ rIsBreak }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:var(--space-3);max-width:760px"><sc-for list="{{ rRows }}" as="c" hint-placeholder-count="5"><div style="display:flex;flex-direction:column;gap:4px"><div style="display:flex;justify-content:space-between;gap:var(--space-2);font-size:15px"><span>{{ c.name }}</span><span style="font-variant-numeric:tabular-nums;color:var(--color-neutral-800)">{{ c.amt }} · {{ c.pct }}</span></div><div style="height:8px;background:var(--color-neutral-100)"><div data-grow="x" style="height:100%;width:{{ c.w }};background:{{ c.color }};transform-origin:left"></div></div></div></sc-for></div>
+</sc-if>
+<sc-if value="{{ rEmpty }}" hint-placeholder-val="{{ false }}"><div style="color:var(--color-neutral-700)">Sin gastos en este período.</div></sc-if>
+</div>
+<p style="margin:0;font-size:13px;color:var(--color-neutral-700)"><i class="ph-duotone ph-flask"></i> Calculado sobre los gastos de demostración de {{ co.name }}; excluye descartados.</p>
+</div></sc-if>
+
+<sc-if value="{{ showUsers }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:var(--space-4)">
+<div style="display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center"><span style="font-size:14px;color:var(--color-neutral-800)">{{ memCount }}</span><span style="flex:1"></span><sc-if value="{{ canManage }}" hint-placeholder-val="{{ true }}"><button class="btn btn-primary" style="white-space:nowrap" onClick="{{ openInvite }}"><i class="ph-duotone ph-user-plus"></i> Invitar miembro</button></sc-if></div>
+<div style="display:flex;flex-direction:column">
+<sc-for list="{{ members }}" as="m" hint-placeholder-count="5">
+<div style="display:grid;grid-template-columns:{{ memCols }};gap:var(--space-3);align-items:center;padding:var(--space-3) 0;box-shadow:0 1px 0 var(--color-neutral-200);opacity:{{ m.op }}" data-a="1">
+<span style="width:40px;height:40px;flex:none;border-radius:50%;display:grid;place-items:center;background:var(--color-accent-100);color:var(--color-accent-900);font-weight:700;font-size:14px">{{ m.ini }}</span>
+<span style="min-width:0;display:flex;flex-direction:column;line-height:1.3"><span style="font-weight:600;font-size:15px">{{ m.name }}</span><span style="font-size:13px;color:var(--color-neutral-700);overflow:hidden;text-overflow:ellipsis">{{ m.email }}</span></span>
+<span style="display:flex;gap:var(--space-2);flex-wrap:wrap;grid-column:{{ memTagCol }}"><span class="{{ m.invCls }}" style="white-space:nowrap">{{ m.inv }}</span><span class="{{ m.accCls }}" style="white-space:nowrap">{{ m.acc }}</span></span>
+<sc-if value="{{ m.editable }}" hint-placeholder-val="{{ false }}"><select class="input" data-v="{{ m.role }}" aria-label="Rol" onChange="{{ m.setRole }}" style="width:100%;grid-column:{{ memTagCol }}"><sc-for list="{{ m.roleOpts }}" as="o" hint-placeholder-count="4"><option value="{{ o.v }}" selected="{{ o.sel }}">{{ o.v }}</option></sc-for></select></sc-if>
+<sc-if value="{{ m.fixed }}" hint-placeholder-val="{{ true }}"><span style="font-size:14px;grid-column:{{ memTagCol }}">{{ m.role }}</span></sc-if>
+<span style="display:flex;gap:var(--space-1);justify-content:flex-end;grid-column:{{ memTagCol }}"><sc-for list="{{ m.actions }}" as="a" hint-placeholder-count="1"><button class="btn btn-ghost" style="white-space:nowrap;color:{{ a.color }}" onClick="{{ a.run }}">{{ a.label }}</button></sc-for></span>
+</div></sc-for></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--space-4);margin-top:var(--space-4)"><sc-for list="{{ roleDocs }}" as="r" hint-placeholder-count="5"><div style="display:flex;flex-direction:column;gap:4px"><strong style="font-size:15px">{{ r.n }}</strong><span style="font-size:14px;color:var(--color-neutral-800)">{{ r.d }}</span></div></sc-for></div>
+</div></sc-if>
+
+<sc-if value="{{ showCfg }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:var(--space-8);max-width:820px">
+<div style="display:flex;flex-direction:column;gap:var(--space-4)"><h2 style="font-family:var(--font-heading);font-size:24px;margin:0">Organización</h2>
+<div style="display:flex;align-items:center;gap:var(--space-4);flex-wrap:wrap"><span style="width:64px;height:64px;display:grid;place-items:center;background:{{ co.color }};color:#fff;font-size:22px;font-weight:700;border-radius:var(--radius-md)">{{ co.initials }}</span><button class="btn btn-secondary" style="white-space:nowrap" onClick="{{ changeLogo }}"><i class="ph-duotone ph-image"></i> Cambiar logotipo</button></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:var(--space-3)"><sc-for list="{{ cfgFields }}" as="f" hint-placeholder-count="5"><div class="field"><label>{{ f.l }}</label><input class="input" value="{{ f.v }}" onInput="{{ f.set }}" disabled="{{ f.dis }}"><sc-if value="{{ f.note }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:var(--color-neutral-700)">{{ f.note }}</span></sc-if></div></sc-for></div></div>
+<div style="display:flex;flex-direction:column;gap:var(--space-3)"><h2 style="font-family:var(--font-heading);font-size:24px;margin:0">Preferencias de clasificación</h2>
+<sc-for list="{{ cfgPrefs }}" as="p" hint-placeholder-count="4"><label style="display:flex;gap:var(--space-3);align-items:flex-start;cursor:pointer;padding:var(--space-1) 0"><input type="checkbox" checked="{{ p.on }}" onChange="{{ p.toggle }}" style="width:18px;height:18px;margin-top:3px;accent-color:var(--color-accent)"><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:15px">{{ p.l }}</span><span style="font-size:13px;color:var(--color-neutral-700)">{{ p.d }}</span></span></label></sc-for></div>
+<div style="display:flex;flex-direction:column;gap:var(--space-2)"><h2 style="font-family:var(--font-heading);font-size:24px;margin:0">Espacio de trabajo</h2>
+<div style="display:flex;flex-wrap:wrap;gap:var(--space-2)"><sc-for list="{{ cfgLinks }}" as="l" hint-placeholder-count="3"><button class="btn btn-ghost" style="white-space:nowrap" onClick="{{ l.go }}"><i class="{{ l.icon }}"></i> {{ l.label }}</button></sc-for></div></div>
+<div style="display:flex;gap:var(--space-2);flex-wrap:wrap"><button class="btn btn-primary" style="white-space:nowrap" onClick="{{ saveDemo }}"><i class="ph-duotone ph-floppy-disk"></i> Guardar cambios</button><span style="font-size:13px;color:var(--color-neutral-700);align-self:center">Demostración: no se guarda en ningún servidor.</span></div>
+</div></sc-if>
+
+<sc-if value="{{ showMe }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:var(--space-8);max-width:820px">
+<div style="display:flex;flex-direction:column;gap:var(--space-4)"><h2 style="font-family:var(--font-heading);font-size:24px;margin:0">Perfil</h2>
+<div style="display:flex;align-items:center;gap:var(--space-4)"><span style="width:64px;height:64px;border-radius:50%;display:grid;place-items:center;background:var(--color-accent-100);color:var(--color-accent-900);font-size:22px;font-weight:700">LR</span><div style="display:flex;flex-direction:column"><strong>Lucía Ramírez</strong><span style="font-size:13px;color:var(--color-neutral-700)">Miembro de {{ orgCount }} organizaciones y un espacio personal</span></div></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:var(--space-3)"><div class="field"><label>Nombre</label><input class="input" value="Lucía Ramírez"></div><div class="field"><label>Correo electrónico</label><input class="input" value="lucia.ramirez@correo.pe"></div></div></div>
+<div style="display:flex;flex-direction:column;gap:var(--space-3)"><h2 style="font-family:var(--font-heading);font-size:24px;margin:0">Preferencias visuales</h2>
+<div class="seg" style="align-self:flex-start"><sc-for list="{{ themeOpts }}" as="o" hint-placeholder-count="3"><label class="seg-opt" style="white-space:nowrap;padding:8px 16px"><input type="radio" name="theme-me" checked="{{ o.on }}" onChange="{{ o.pick }}"><i class="{{ o.icon }}"></i><span>{{ o.label }}</span></label></sc-for></div>
+<span style="font-size:13px;color:var(--color-neutral-700)">Automático sigue la configuración de tu sistema operativo. Se aplica en todas las organizaciones.</span></div>
+<div style="display:flex;flex-direction:column;gap:var(--space-3)"><h2 style="font-family:var(--font-heading);font-size:24px;margin:0">Notificaciones</h2>
+<sc-for list="{{ mePrefs }}" as="p" hint-placeholder-count="4"><label style="display:flex;gap:var(--space-3);align-items:flex-start;cursor:pointer;padding:var(--space-1) 0"><input type="checkbox" checked="{{ p.on }}" onChange="{{ p.toggle }}" style="width:18px;height:18px;margin-top:3px;accent-color:var(--color-accent)"><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:15px">{{ p.l }}</span><span style="font-size:13px;color:var(--color-neutral-700)">{{ p.d }}</span></span></label></sc-for></div>
+<div style="display:flex;flex-direction:column;gap:var(--space-3)"><h2 style="font-family:var(--font-heading);font-size:24px;margin:0">Cuenta</h2>
+<div style="display:flex;flex-wrap:wrap;gap:var(--space-2)"><sc-for list="{{ meAcct }}" as="a" hint-placeholder-count="3"><button class="btn btn-secondary" style="white-space:nowrap;color:{{ a.color }}" onClick="{{ a.run }}"><i class="{{ a.icon }}"></i> {{ a.label }}</button></sc-for></div></div>
+<div style="display:flex;gap:var(--space-2);flex-wrap:wrap"><button class="btn btn-primary" style="white-space:nowrap" onClick="{{ saveDemo }}"><i class="ph-duotone ph-floppy-disk"></i> Guardar cambios</button><span style="font-size:13px;color:var(--color-neutral-700);align-self:center">Demostración: no se guarda en ningún servidor.</span></div>
+</div></sc-if>
+
+<sc-if value="{{ inv }}" hint-placeholder-val="{{ false }}">
+<div class="dialog-backdrop" onClick="{{ closeInvite }}" style="position:fixed;inset:0;z-index:70;display:grid;place-items:center;padding:var(--space-4)">
+<div data-pop="1" class="dialog" role="dialog" aria-modal="true" onClick="{{ stop }}" style="width:min(440px,100%);display:flex;flex-direction:column;gap:var(--space-4)">
+<div class="dialog-title">Invitar a {{ co.name }}</div>
+<div class="field"><label>Correo electrónico</label><input class="input" type="email" placeholder="nombre@empresa.pe" value="{{ inv.email }}" onInput="{{ onInvEmail }}"></div>
+<div class="field"><label>Rol</label><select class="input" data-v="{{ inv.role }}" onChange="{{ onInvRole }}"><sc-for list="{{ invRoleOpts }}" as="o" hint-placeholder-count="4"><option value="{{ o.v }}" selected="{{ o.sel }}">{{ o.v }}</option></sc-for></select></div>
+<span style="font-size:13px;color:var(--color-neutral-700)">Demostración: no se enviará ningún correo.</span>
+<div class="dialog-actions" style="display:flex;justify-content:flex-end;gap:var(--space-2)"><button class="btn btn-ghost" style="white-space:nowrap" onClick="{{ closeInvite }}">Cancelar</button><button class="btn btn-primary" style="white-space:nowrap" onClick="{{ sendInvite }}">Enviar invitación</button></div>
+</div></div></sc-if>
+
+<sc-if value="{{ showGeneric }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:var(--space-3);max-width:60ch">
+<p style="margin:0;font-size:18px">{{ page.desc }}</p>
+<div style="display:flex;flex-wrap:wrap;gap:var(--space-2)"><span class="tag tag-outline"><span>Rol: {{ co.role }}</span></span><span class="tag tag-neutral"><span>Se diseña en {{ page.phase }}</span></span></div>
+</div></sc-if>
+</main></div>
+
+<sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+<div data-toast="1" role="status" style="position:fixed;bottom:var(--space-4);right:var(--space-4);left:{{ toastLeft }};z-index:60;display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3) var(--space-4);background:var(--color-surface);color:var(--color-text);box-shadow:var(--shadow-lg);border-radius:var(--radius-md);font-size:15px;max-width:440px"><i class="{{ toast.icon }}" style="color:var(--color-accent);font-size:20px"></i><span style="flex:1">{{ toast.text }}</span><button class="btn btn-ghost btn-icon" aria-label="Cerrar" onClick="{{ hideToast }}"><i class="ph-duotone ph-x"></i></button></div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const COMPANIES=[
+{id:'demo',name:'Empresa Demo S.A.C.',short:'Empresa Demo',initials:'ED',role:'Administrador',color:'#0088b0',kind:'Empresa',review:7},
+{id:'sec',name:'Empresa Secundaria S.A.C.',short:'Empresa Secundaria',initials:'ES',role:'Contador',color:'#6b5d52',kind:'Empresa',review:3},
+{id:'andina',name:'Constructora Andina S.A.C.',short:'Constructora Andina',initials:'CA',role:'Supervisor',color:'#4f6b3a',kind:'Empresa',review:12},
+{id:'norte',name:'Inversiones Lima Norte E.I.R.L.',short:'Lima Norte',initials:'LN',role:'Empleado',color:'#7a4b8c',kind:'Empresa',review:1},
+{id:'rimac',name:'Transportes Rímac S.A.',short:'Transportes Rímac',initials:'TR',role:'Propietario',color:'#a4552b',kind:'Empresa',review:0}];
+const PERSONAL={id:'personal',name:'Gastos personales',short:'Personal',initials:'GP',role:'Titular',color:'#5c5856',kind:'Personal',review:2};
+const PAGES={
+revision:{label:'Revisión IA',icon:'ph-duotone ph-sparkle',phase:'',desc:''},
+dashboard:{label:'Dashboard',icon:'ph-duotone ph-squares-four',phase:'Fase 4',desc:'Resumen financiero del día, semana y mes; distribución por categoría, pendientes de revisión y posibles duplicados.'},
+gastos:{label:'Gastos',icon:'ph-duotone ph-receipt',phase:'Fase 5',desc:'Tabla de gastos con búsqueda, filtros, ordenamiento, bandeja de revisión IA y detalle de cada gasto.'},
+comprobantes:{label:'Comprobantes y evidencias',icon:'ph-duotone ph-files',phase:'Fase 5',desc:'Facturas, boletas, capturas de Yape, fotos y audios con previsualización y acceso al gasto relacionado.'},
+proveedores:{label:'Proveedores',icon:'ph-duotone ph-storefront',phase:'Fase 5',desc:'Proveedores con RUC, número de gastos, total de compras, última operación y clasificación habitual.'},
+proyectos:{label:'Proyectos y pedidos',icon:'ph-duotone ph-folders',phase:'Fase 5',desc:'Proyectos y pedidos con costo acumulado, categorías de gasto e historial de operaciones.'},
+categorias:{label:'Categorías',icon:'ph-duotone ph-tag',phase:'Fase 5',desc:'Categorías de gasto de esta organización y sus reglas de clasificación.'},
+reportes:{label:'Reportes',icon:'ph-duotone ph-chart-bar',phase:'Fase 5',desc:'Gastos por período, categoría, proveedor, usuario, proyecto y medio de pago, con exportación.'},
+usuarios:{label:'Usuarios y miembros',icon:'ph-duotone ph-users',phase:'Fase 6',desc:'Miembros de la organización, roles, invitaciones y estado de cuenta.'},
+empresa:{label:'Configuración de empresa',icon:'ph-duotone ph-buildings',phase:'Fase 6',desc:'Datos de la organización, logotipo, preferencias de clasificación, categorías y proyectos.'},
+personal:{label:'Configuración personal',icon:'ph-duotone ph-user-gear',phase:'Fase 6',desc:'Perfil, tema, notificaciones y opciones de cuenta.'}};
+const GROUPS=[{label:'Principal',ids:['dashboard','revision','gastos','comprobantes','proveedores','proyectos','categorias','reportes']},{label:'Administración',ids:['usuarios','empresa','personal']}];
+const PERMS={
+Propietario:Object.keys(PAGES),
+Administrador:Object.keys(PAGES),
+Contador:['dashboard','gastos','comprobantes','proveedores','proyectos','categorias','reportes','personal'],
+Supervisor:['dashboard','gastos','comprobantes','proveedores','proyectos','reportes','personal'],
+Empleado:['dashboard','gastos','comprobantes','proyectos','personal'],
+Titular:['dashboard','gastos','comprobantes','proveedores','categorias','reportes','personal']};
+Object.values(PERMS).forEach(a=>{if(!a.includes('revision'))a.splice(1,0,'revision');});
+const NOTIFS={
+demo:[{icon:'ph-duotone ph-copy',c:'a2',text:'Posible duplicado: Tambo+ S/ 18.50',time:'Hace 12 min'},{icon:'ph-duotone ph-telegram-logo',c:'a',text:'3 gastos recibidos por Telegram',time:'Hace 1 h'},{icon:'ph-duotone ph-warning',c:'a2',text:'Comprobante ilegible: Grifo Primax',time:'Ayer'}],
+sec:[{icon:'ph-duotone ph-check-circle',c:'a',text:'Reporte de agosto listo',time:'Hace 3 h'}],
+andina:[{icon:'ph-duotone ph-copy',c:'a2',text:'2 posibles duplicados en Obra Surco',time:'Hace 20 min'},{icon:'ph-duotone ph-user-plus',c:'a',text:'Carlos Vega aceptó la invitación',time:'Ayer'}],
+norte:[],rimac:[],
+personal:[{icon:'ph-duotone ph-microphone',c:'a',text:'Audio procesado: almuerzo S/ 32.00',time:'Hace 2 h'}]};
+const DASH={
+demo:{k:[1382.4,960,11240.5,12010,48215.3,44560],base:1600,biz:86,cats:[['Materiales',38],['Servicios',16],['Transporte',18],['Alimentación',12],['Oficina',9],['Otros',7]],
+ review:[['dup','Tambo+ · S/ 18.50','Coincide con un gasto del 27 set'],['info','Grifo Primax · S/ 150.00','Comprobante ilegible, falta RUC'],['pend','Sodimac Perú · S/ 1,240.00','Clasificación sugerida: Materiales'],['proc','Audio de Telegram','Recibido hace 2 min']],
+ recent:[['28 set','Cemento y fierro para almacén','Sodimac Perú','Materiales',1240],['28 set','Taxi a reunión con cliente','Cabify','Transporte',28.9],['27 set','Almuerzo de equipo','La Lucha Sanguchería','Alimentación',96],['27 set','Hosting anual','Hostinger','Servicios',389],['26 set','Combustible camioneta','Grifo Primax','Transporte',150]]},
+sec:{k:[240,410,2890,2440,9870.6,10420],base:380,biz:94,cats:[['Servicios',34],['Oficina',22],['Transporte',18],['Alimentación',14],['Otros',12]],
+ review:[['pend','Tai Loy · S/ 212.40','Clasificación sugerida: Oficina'],['info','Boleta sin fecha · S/ 45.00','Falta la fecha de emisión']],
+ recent:[['28 set','Útiles de oficina','Tai Loy','Oficina',212.4],['26 set','Internet fibra','Movistar','Servicios',179],['25 set','Courier documentos','Olva Courier','Transporte',22],['24 set','Café reunión','Starbucks','Alimentación',41.5]]},
+andina:{k:[6420,5100,31800,28750,126430,118900],base:7400,biz:97,cats:[['Materiales',52],['Maquinaria',19],['Mano de obra',14],['Transporte',9],['Otros',6]],
+ review:[['dup','Unicon · S/ 4,860.00','Posible duplicado — Obra Surco'],['dup','Promart · S/ 612.30','Posible duplicado — Obra Surco'],['pend','Alquiler de mezcladora · S/ 950.00','Proyecto sugerido: Obra Surco'],['err','Foto borrosa','No se pudo leer el comprobante']],
+ recent:[['28 set','Concreto premezclado','Unicon','Materiales',4860],['28 set','Alquiler mezcladora','Maquinarias JR','Maquinaria',950],['27 set','Ladrillos King Kong','Promart','Materiales',612.3],['27 set','Flete a obra','Transportes Rímac','Transporte',380]]},
+norte:{k:[64,0,318.5,290,1240.8,1180],base:90,biz:100,cats:[['Transporte',41],['Alimentación',33],['Oficina',26]],
+ review:[['pend','Taxi Satelital · S/ 32.00','Clasificación sugerida: Transporte']],
+ recent:[['28 set','Taxi a notaría','Taxi Satelital','Transporte',32],['26 set','Menú ejecutivo','Restaurante El Rincón','Alimentación',18],['24 set','Impresiones','Copias Express','Oficina',14.5]]},
+rimac:{k:[2150,2380,14800,15920,61240,63800],base:2200,biz:92,cats:[['Combustible',46],['Mantenimiento',24],['Peajes',12],['Seguros',10],['Otros',8]],
+ review:[],
+ recent:[['28 set','Diésel flota',"Grifo Repsol",'Combustible',1820],['27 set','Peajes Panamericana','Rutas de Lima','Peajes',186],['26 set','Cambio de llantas','Llantas Perú','Mantenimiento',2340]]},
+personal:{k:[48.5,112,386.2,455,1692.3,1810],base:120,biz:0,cats:[['Alimentación',36],['Transporte',21],['Hogar',19],['Salud',12],['Ocio',12]],
+ review:[['pend','Audio: almuerzo · S/ 32.00','Clasificación sugerida: Alimentación']],
+ recent:[['28 set','Almuerzo','Pardos Chicken','Alimentación',32],['27 set','Recarga Metropolitano','ATU','Transporte',20],['26 set','Farmacia','Inkafarma','Salud',64.9]]}};
+const RV={dup:['ph-duotone ph-copy','a2','tag tag-accent-2','Posible duplicado'],info:['ph-duotone ph-warning-circle','a2','tag tag-accent-2','Requiere info'],pend:['ph-duotone ph-sparkle','a','tag tag-accent','Pendiente'],proc:['ph-duotone ph-circle-notch','n','tag tag-neutral','Procesando'],err:['ph-duotone ph-x-circle','a2','tag tag-accent-2','Error']};
+const money=n=>'S/ '+n.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
+function buildDash(co,hi,setHi,goRev){
+  const d=DASH[co.id],[t,pt,w,pw,m,pm]=d.k;
+  const dl=(a,b,vs)=>{if(!b)return{delta:'—',vs,dColor:'var(--color-neutral-700)'};const p=(a-b)/b*100;return{delta:(p>=0?'▲ ':'▼ ')+Math.abs(p).toFixed(1)+'%',vs,dColor:p>0?'var(--color-accent-2-700)':'var(--color-accent-700)'};};
+  let seed=[...co.id].reduce((a,c)=>a+c.charCodeAt(0),7);const rnd=()=>(seed=(seed*9301+49297)%233280)/233280;
+  const vals=Array.from({length:14},(_,i)=>i===13?t:d.base*(.35+rnd()*1.1));const mx=Math.max(...vals);
+  const pal=['var(--color-accent)','var(--color-accent-700)','var(--color-neutral-700)','var(--color-neutral-500)','var(--color-neutral-300)','var(--color-neutral-200)'];
+  return{
+    scope:co.role==='Empleado'?'Mostrando solo tus gastos':co.kind==='Personal'?'Espacio personal, separado de las empresas':'Todos los gastos de la organización',
+    kpis:[{label:'Hoy',raw:t,value:money(t),...dl(t,pt,'vs. ayer')},{label:'Esta semana',raw:w,value:money(w),...dl(w,pw,'vs. semana anterior')},{label:'Setiembre',raw:m,value:money(m),...dl(m,pm,'vs. agosto')}],
+    days:vals.map((v,i)=>{const day=15+i,sel=hi==null?13:hi;return{enter:()=>setHi(i),h:(v/mx*100).toFixed(1)+'%',c:i===sel?'var(--color-accent)':'var(--color-neutral-300)',lbl:i%2?'':String(day),tip:day+' set · '+money(v)};}),
+    hoverAmt:money(vals[hi==null?13:hi]),hoverLbl:(15+(hi==null?13:hi))+' de setiembre'+((hi==null||hi===13)?' · hoy':''),
+    cats:d.cats.map(([name,p],i)=>({name,pct:p+'%',amt:money(m*p/100),color:pal[i]})),
+    bizPct:d.biz+'%',perPct:(100-d.biz)+'%',chartSpan:1,
+    review:d.review.map(([k,title,sub])=>{const r=RV[k];return{go:()=>goRev(k),icon:r[0],iColor:r[1]==='a2'?'var(--color-accent-2)':r[1]==='a'?'var(--color-accent)':'var(--color-neutral-700)',tagCls:r[2],status:r[3],title,sub};}),
+    noReview:!d.review.length,
+    recent:d.recent.map(([date,desc,prov,cat,a])=>({date,desc,prov,cat,amt:money(a)}))
+  };
+}
+const MON=['ene','feb','mar','abr','may','jun','jul','ago','set','oct','nov','dic'];
+const fd=d=>d.getDate()+' '+MON[d.getMonth()];
+const PAYS=['Tarjeta','Yape','Efectivo','Transferencia','Plin'];
+const POOLS={
+demo:{v:[['Sodimac Perú S.A.','Materiales',['Cemento y fierro para almacén','Pintura y brochas','Herramientas eléctricas'],120,1800],['Promart Homecenter','Materiales',['Tuberías PVC','Cableado eléctrico'],80,900],['Cabify Perú','Transporte',['Taxi a reunión con cliente','Traslado al aeropuerto'],18,65],['Grifo Primax','Transporte',['Combustible camioneta'],90,220],['La Lucha Sanguchería','Alimentación',['Almuerzo de equipo','Refrigerio de reunión'],30,140],['Hostinger','Servicios',['Hosting anual','Renovación de dominio'],40,420,false],['Movistar Perú','Servicios',['Internet fibra','Plan móvil corporativo'],79,199],['Tai Loy S.A.','Oficina',['Útiles de oficina','Tóner para impresora'],25,260]],p:['Remodelación oficina Miraflores','Pedido #1042 — Cliente Norte','Almacén Callao'],u:['Lucía Ramírez','Jorge Paredes','Ana Quispe']},
+sec:{v:[['Tai Loy S.A.','Oficina',['Útiles de oficina','Archivadores'],20,240],['Movistar Perú','Servicios',['Internet fibra'],179,179],['Olva Courier','Transporte',['Courier de documentos'],12,40],['Starbucks Perú','Alimentación',['Café de reunión'],18,60],['Estudio Contable Medina','Servicios',['Asesoría tributaria'],350,900]],p:['Auditoría 2026','Pedido #88 — Declaraciones'],u:['Lucía Ramírez','Rosa Medina']},
+andina:{v:[['Unicon','Materiales',['Concreto premezclado'],1800,6000],['Promart Homecenter','Materiales',['Ladrillos King Kong','Cemento Sol'],300,1400],['Maquinarias JR','Maquinaria',['Alquiler de mezcladora','Alquiler de andamios'],400,1500],['Transportes Rímac S.A.','Transporte',['Flete a obra'],250,600],['Ferretería El Maestro','Materiales',['Clavos y alambre','Herramientas manuales'],60,420],['Cuadrilla Huamán','Mano de obra',['Pago de jornales'],600,2400,false]],p:['Obra Surco','Edificio San Borja','Pedido #311 — Acabados'],u:['Lucía Ramírez','Carlos Vega','Miguel Torres']},
+norte:{v:[['Taxi Satelital','Transporte',['Taxi a notaría','Taxi a SUNARP'],18,40],['Restaurante El Rincón','Alimentación',['Menú ejecutivo'],14,24,false],['Copias Express','Oficina',['Impresiones y copias'],6,30,false]],p:['Trámite notarial'],u:['Lucía Ramírez']},
+rimac:{v:[['Grifo Repsol','Combustible',['Diésel flota'],600,2200],['Rutas de Lima','Peajes',['Peajes Panamericana'],40,200],['Llantas Perú','Mantenimiento',['Cambio de llantas','Alineamiento y balanceo'],180,2400],['Rímac Seguros','Seguros',['Póliza vehicular mensual'],480,900]],p:['Ruta Lima–Ica','Ruta Lima–Huacho'],u:['Lucía Ramírez','Pedro Salas']},
+personal:{v:[['Pardos Chicken','Alimentación',['Almuerzo','Cena familiar'],30,120],['Wong','Hogar',['Compras del mes','Limpieza'],60,380],['Inkafarma','Salud',['Farmacia'],15,90],['ATU','Transporte',['Recarga Metropolitano'],10,30,false],['Cineplanet','Ocio',['Entradas de cine'],24,70]],p:[],u:['Lucía Ramírez']}};
+const SEQ=['pend','dup','info','pend','proc','err','pend','dup','pend','info','pend','pend'];
+const STAT={proc:['Procesando','tag tag-neutral'],pend:['Pendiente de revisión','tag tag-accent'],info:['Requiere información','tag tag-accent-2'],dup:['Posible duplicado','tag tag-accent-2'],ok:['Registrado','tag tag-outline'],err:['Error de procesamiento','tag tag-accent-2'],desc:['Descartado','tag tag-neutral']};
+const KIND={Factura:['Comprobante','ph-duotone ph-receipt'],Boleta:['Comprobante','ph-duotone ph-receipt'],Yape:['Pago','ph-duotone ph-device-mobile'],Plin:['Pago','ph-duotone ph-device-mobile'],Transferencia:['Pago','ph-duotone ph-bank'],Foto:['Evidencia','ph-duotone ph-camera'],Audio:['Evidencia','ph-duotone ph-microphone']};
+const GCLS={Comprobante:'tag tag-accent',Pago:'tag tag-neutral',Evidencia:'tag tag-outline'};
+const CACHE={};
+function gen(coId,reviewN){
+  if(CACHE[coId])return CACHE[coId];
+  const P=POOLS[coId];let seed=[...coId].reduce((a,c)=>(a*31+c.charCodeAt(0))%233280,11);
+  const r=()=>(seed=(seed*9301+49297)%233280)/233280,pick=a=>a[Math.floor(r()*a.length)];
+  const rucs=P.v.map(()=>'20'+String(Math.floor(r()*1e9)).padStart(9,'0'));
+  const list=[];let day=0;
+  for(let i=0;i<34;i++){
+    if(i>0&&r()<.55)day++;
+    const vi=Math.floor(r()*P.v.length),v=P.v[vi],ch=pick(['foto','foto','audio','texto']);
+    list.push({id:'G-'+(4200-i),date:new Date(2026,8,28-day),desc:pick(v[2]),prov:v[0],ruc:v[5]===false?'':rucs[vi],cat:v[1],
+      type:coId==='personal'?'Personal':(r()<.9?'Empresarial':'Personal'),proj:P.p.length&&r()<.6?pick(P.p):'',pay:pick(PAYS),
+      amt:Math.round((v[3]+r()*(v[4]-v[3]))*10)/10,st:i<reviewN?SEQ[i%SEQ.length]:'ok',user:pick(P.u),channel:'Telegram · '+ch});
+  }
+  list.forEach((e,i)=>{
+    if(e.st==='dup'){const o=list[reviewN+i];Object.assign(e,{desc:o.desc,prov:o.prov,ruc:o.ruc,cat:o.cat,amt:o.amt,pay:o.pay,proj:o.proj});e.dupOf=o.id;}
+    if(e.st==='info')e.ruc='';
+    const ev=[],comp=e.ruc&&e.amt>=100?'Factura':'Boleta';
+    if(e.channel.endsWith('audio'))ev.push('Audio');else if(e.channel.endsWith('foto'))ev.push(comp);
+    if(['Yape','Plin','Transferencia'].includes(e.pay))ev.push(e.pay);
+    if(e.channel.endsWith('foto')&&r()<.25)ev.push('Foto');
+    e.ev=ev.map((k,j)=>({k,file:k.toLowerCase()+'-'+e.id.slice(2)+(j?'-'+j:'')+(k==='Audio'?'.ogg':'.jpg')}));
+    e.op=String(Math.floor(r()*9e7)+1e7);
+  });
+  return CACHE[coId]=list;
+}
+const CATPAL=['var(--color-accent)','var(--color-accent-700)','var(--color-neutral-700)','var(--color-neutral-500)','var(--color-neutral-300)','var(--color-neutral-200)'];
+function catBreak(rows){const m={};let t=0;rows.forEach(e=>{m[e.cat]=(m[e.cat]||0)+e.amt;t+=e.amt;});return Object.entries(m).sort((a,b)=>b[1]-a[1]).map(([name,a],i)=>({name,amt:money(a),pct:(t?a/t*100:0).toFixed(0)+'%',w:(t?a/t*100:0)+'%',color:CATPAL[i%6],c:CATPAL[i%6],tip:name+' '+money(a)}));}
+const MEMBERS={
+demo:[['Martín Castro','martin.castro@empresademo.pe','Propietario','Aceptada','Activa'],['Lucía Ramírez','lucia.ramirez@correo.pe','Administrador','Aceptada','Activa',1],['Jorge Paredes','jorge.paredes@empresademo.pe','Empleado','Aceptada','Activa'],['Ana Quispe','ana.quispe@empresademo.pe','Supervisor','Aceptada','Activa'],['Rosa Medina','rosa.medina@contamedina.pe','Contador','Pendiente','—'],['Diego Luna','diego.luna@empresademo.pe','Empleado','Aceptada','Suspendida']],
+sec:[['Raúl Soto','raul.soto@secundaria.pe','Propietario','Aceptada','Activa'],['Lucía Ramírez','lucia.ramirez@correo.pe','Contador','Aceptada','Activa',1],['Rosa Medina','rosa.medina@contamedina.pe','Administrador','Aceptada','Activa']],
+andina:[['Elena Huamán','elena.huaman@andina.pe','Propietario','Aceptada','Activa'],['Lucía Ramírez','lucia.ramirez@correo.pe','Supervisor','Aceptada','Activa',1],['Carlos Vega','carlos.vega@andina.pe','Empleado','Aceptada','Activa'],['Miguel Torres','miguel.torres@andina.pe','Empleado','Aceptada','Activa'],['Sofía Ríos','sofia.rios@andina.pe','Contador','Expirada','—']],
+norte:[['Héctor Díaz','hector.diaz@limanorte.pe','Propietario','Aceptada','Activa'],['Lucía Ramírez','lucia.ramirez@correo.pe','Empleado','Aceptada','Activa',1]],
+rimac:[['Lucía Ramírez','lucia.ramirez@correo.pe','Propietario','Aceptada','Activa',1],['Pedro Salas','pedro.salas@trimac.pe','Administrador','Aceptada','Activa'],['Nora Chávez','nora.chavez@trimac.pe','Contador','Pendiente','—']]};
+const ORGINFO={demo:['20601234561','Av. Larco 1150, Miraflores, Lima'],sec:['20607654329','Jr. Huallaga 320, Cercado de Lima'],andina:['20512398764','Av. Primavera 890, Surco, Lima'],norte:['20609871230','Av. Túpac Amaru 4410, Comas, Lima'],rimac:['20456781236','Av. Argentina 2350, Callao']};
+const ROLES=['Propietario','Administrador','Supervisor','Contador','Empleado'];
+class Component extends DCLogic {
+  state={revFilter:'all',hi:null,catExtra:{},catOff:{},newCat:'',rRange:'30',rDim:'cat',memOv:{},invited:{},inv:null,cfg:{},cfgPrefs:{},mePrefs:{},gq:'',gf:{st:'',cat:'',type:'',pay:''},gTab:'all',gsort:{k:'date',dir:-1},gpage:0,detailId:null,edit:null,ov:{},done:null,fGroup:'',fq:'',pq:'',projId:null,preview:null,coId:'demo',page:'dashboard',theme:'light',sysDark:false,open:null,drawer:false,coQuery:'',loading:false,toast:null,w:1280};
+  componentDidMount(){
+    try{const s=JSON.parse(localStorage.getItem('siregg-ui')||'{}');this.setState({theme:s.theme||'light',coId:s.coId||'demo',page:s.page||'dashboard'});}catch(e){}
+    this.mq=window.matchMedia('(prefers-color-scheme: dark)');this.mqh=()=>this.setState({sysDark:this.mq.matches});this.mqh();this.mq.addEventListener('change',this.mqh);
+    this.rh=()=>this.setState({w:window.innerWidth});this.rh();this.syncSel();this.kh=ev=>this.onKey(ev);window.addEventListener('keydown',this.kh);this.fx();window.addEventListener('resize',this.rh);
+  }
+  syncSel(){requestAnimationFrame(()=>document.querySelectorAll('select[data-v]').forEach(el=>{if(el.value!==el.dataset.v)el.value=el.dataset.v;}));}
+  componentDidUpdate(){this.syncSel();this.fx();}
+  componentWillUnmount(){window.removeEventListener('keydown',this.kh);clearTimeout(this.at);this.mq.removeEventListener('change',this.mqh);window.removeEventListener('resize',this.rh);clearTimeout(this.lt);clearTimeout(this.tt);}
+  save(p){const s={theme:this.state.theme,coId:this.state.coId,page:this.state.page,...p};localStorage.setItem('siregg-ui',JSON.stringify(s));}
+  showToast(text,icon='ph-duotone ph-info'){clearTimeout(this.tt);this.setState({toast:{text,icon}});this.tt=setTimeout(()=>this.setState({toast:null}),3800);}
+  co(){return this.state.coId==='personal'?PERSONAL:COMPANIES.find(c=>c.id===this.state.coId)||COMPANIES[0];}
+  switchTo(id){
+    if(id===this.state.coId){this.setState({open:null});return;}
+    const c=id==='personal'?PERSONAL:COMPANIES.find(x=>x.id===id);
+    let page=this.state.page;if(!PERMS[c.role].includes(page))page='dashboard';
+    this.setState({coId:id,page,open:null,coQuery:'',loading:true,drawer:false,...this.resetView()});this.save({coId:id,page});
+    clearTimeout(this.lt);this.lt=setTimeout(()=>{this.setState({loading:false});this.showToast('Ahora en '+c.name+' (demostración)','ph-duotone ph-arrows-left-right');},700);
+  }
+  resetView(){return{revFilter:'all',hi:null,inv:null,newCat:'',gq:'',gf:{st:'',cat:'',type:'',pay:''},gTab:'all',gpage:0,detailId:null,edit:null,done:null,fGroup:'',fq:'',pq:'',projId:null,preview:null};}
+  go(id){this.setState({page:id,drawer:false,open:null,detailId:null,edit:null,projId:null,preview:null,done:null});this.save({page:id});}
+  key(id){return this.state.coId+'|'+id;}
+  list(){const co=this.co();return gen(co.id,co.review).map(e=>({...e,...(this.state.ov[this.key(e.id)]||{})}));}
+  patch(id,p){this.setState(s=>({ov:{...s.ov,[this.key(id)]:{...(s.ov[this.key(id)]||{}),...p}}}));}
+  openDetail(id){
+    this.setState({page:this.state.page==='revision'?'revision':'gastos',detailId:id,edit:null,preview:null,projId:null,done:null});
+    const e=this.list().find(x=>x.id===id);
+    if(e&&e.st==='proc'){clearTimeout(this.pt);this.pt=setTimeout(()=>{this.patch(id,{st:'pend'});this.showToast('La IA terminó de procesar '+id+'. Revisa los datos sugeridos.','ph-duotone ph-sparkle');},2200);}
+  }
+  advance(id){
+    if(this.state.page!=='revision')return;clearTimeout(this.at);
+    this.at=setTimeout(()=>{if(this.state.page!=='revision')return;const RF={all:null,dup:['dup'],info:['info'],pend:['pend','proc'],err:['err']}[this.state.revFilter];
+      const nx=this.list().find(x=>!['ok','desc'].includes(x.st)&&x.id!==id&&(!RF||RF.includes(x.st)));
+      if(nx)this.openDetail(nx.id);else this.setState({detailId:null,done:null,edit:null});},900);
+  }
+  onKey(ev){
+    if(this.state.page!=='revision'||this.state.inv||this.state.preview)return;const t=ev.target.tagName;if(['INPUT','SELECT','TEXTAREA'].includes(t))return;
+    const n=this._revNav;if(!n||!n.ids.length)return;const i=n.ids.indexOf(n.cur);
+    if(ev.key==='j'||ev.key==='ArrowRight'){this.openDetail(n.ids[Math.min(n.ids.length-1,i+1)]);ev.preventDefault();}
+    else if(ev.key==='k'||ev.key==='ArrowLeft'){this.openDetail(n.ids[Math.max(0,i-1)]);ev.preventDefault();}
+    else if(ev.key==='Enter'&&t!=='BUTTON'&&this._primary){this._primary();ev.preventDefault();}
+  }
+  fx(){
+    if(this._fxq)return;
+    this._fxq=requestAnimationFrame(()=>{this._fxq=0;
+      if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+      const seen=this._seen||(this._seen=new WeakSet()),E='cubic-bezier(.2,.8,.2,1)';let i=0;
+      const dd=document.querySelector('[data-detail]'),dk=(this._revNav&&this._revNav.cur||'')+'|'+this.state.detailId;
+      if(dd&&seen.has(dd)&&dk!==this._lastDet)dd.animate([{opacity:0,transform:'translateX(18px)'},{opacity:1,transform:'none'}],{duration:380,easing:E});
+      this._lastDet=dk;
+      document.querySelectorAll('main h1, main h2, main h3, main tbody tr, main .card, main [data-a], [data-detail]').forEach(el=>{if(seen.has(el))return;seen.add(el);el.animate([{opacity:0,transform:'translateY(14px)'},{opacity:1,transform:'none'}],{duration:480,delay:Math.min(i++,14)*40,easing:E,fill:'backwards'});});
+      let g=0;document.querySelectorAll('[data-grow]').forEach(el=>{if(seen.has(el))return;seen.add(el);const y=el.dataset.grow==='y';el.animate([{transform:y?'scaleY(0)':'scaleX(0)'},{transform:'none'}],{duration:760,delay:120+Math.min(g++,20)*35,easing:E,fill:'backwards'});});
+      document.querySelectorAll('[data-count]').forEach(el=>{if(seen.has(el))return;seen.add(el);const to=parseFloat(el.dataset.count),tn=el.firstChild;if(!to||!tn)return;const fin=tn.nodeValue,t0=performance.now(),D=950;
+        const step=t=>{if(!tn.isConnected)return;const p=Math.min(1,(t-t0)/D);tn.nodeValue=p<1?money(to*(1-Math.pow(1-p,3))):fin;if(p<1)requestAnimationFrame(step);};requestAnimationFrame(step);});
+      document.querySelectorAll('[data-pop]').forEach(el=>{if(seen.has(el))return;seen.add(el);el.animate([{opacity:0,transform:'translateY(-6px) scale(.97)'},{opacity:1,transform:'none'}],{duration:220,easing:E});});
+      document.querySelectorAll('[data-toast]').forEach(el=>{if(seen.has(el))return;seen.add(el);el.animate([{opacity:0,transform:'translateY(18px)'},{opacity:1,transform:'none'}],{duration:340,easing:E});});
+    });
+  }
+  phase5(co,isMobile,allowed){
+    const s=this.state,L=this.list(),on=!s.loading,P=POOLS[co.id];
+    const deco=e=>({...e,dateL:fd(e.date),amtL:money(e.amt),projL:e.proj||'—',stL:STAT[e.st][0],stCls:STAT[e.st][1],rowBg:['dup','info','err'].includes(e.st)?'var(--color-accent-2-100)':'transparent',open:()=>this.openDetail(e.id)});
+    const pendingN=L.filter(e=>!['ok','desc'].includes(e.st)).length;
+    // list
+    const q=s.gq.trim().toLowerCase();
+    let rows=L.filter(e=>(s.gTab==='all'||!['ok','desc'].includes(e.st))&&(!q||(e.desc+' '+e.prov+' '+e.ruc+' '+e.id).toLowerCase().includes(q))&&(!s.gf.st||e.st===s.gf.st)&&(!s.gf.cat||e.cat===s.gf.cat)&&(!s.gf.type||e.type===s.gf.type)&&(!s.gf.pay||e.pay===s.gf.pay));
+    const {k,dir}=s.gsort;rows=rows.slice().sort((a,b)=>{const x=k==='amt'?a.amt-b.amt:k==='prov'?a.prov.localeCompare(b.prov):a.date-b.date||b.id.localeCompare(a.id);return x*dir;});
+    const PER=10,pages=Math.max(1,Math.ceil(rows.length/PER)),pg=Math.min(s.gpage,pages-1);
+    const setF=(f)=>ev=>this.setState(x=>({gf:{...x.gf,[f]:ev.target.value},gpage:0}));
+    const uniq=a=>[...new Set(a)];
+    const opt=(cur,all,vals,lab)=>[{v:'',l:all,sel:cur===''},...vals.map(v=>({v,l:lab?lab(v):v,sel:cur===v}))];
+    const sortBy=kk=>()=>this.setState(x=>({gsort:{k:kk,dir:x.gsort.k===kk?-x.gsort.dir:(kk==='prov'?1:-1)}}));
+    const col=(label,kk,align='left')=>({label,align,sort:kk?sortBy(kk):()=>{},cursor:kk?'pointer':'default',arrow:kk&&s.gsort.k===kk?(s.gsort.dir>0?'↑':'↓'):''});
+    // detail
+    const isRev0=on&&s.page==='revision';
+    const RF={all:null,dup:['dup'],info:['info'],pend:['pend','proc'],err:['err']};
+    const pendAll=L.filter(e=>!['ok','desc'].includes(e.st));
+    const queue=pendAll.filter(e=>!RF[s.revFilter]||RF[s.revFilter].includes(e.st));
+    const keep=s.detailId&&(queue.some(q=>q.id===s.detailId)||s.done===s.detailId);
+    const curId=isRev0?(keep?s.detailId:(queue[0]&&queue[0].id)):s.detailId;
+    this._revNav={ids:queue.map(q=>q.id),cur:curId};this._primary=null;
+    const total=co.review||0,resolved=Math.max(0,total-pendAll.length);
+    const rev={progressLbl:resolved+' de '+total+' revisados',pct:(total?resolved/total*100:100)+'%',empty:isRev0&&!queue.length&&!keep,
+      chips:[['all','Todos'],['dup','Duplicados'],['info','Requieren info'],['pend','Pendientes'],['err','Errores']].map(([v,label])=>{const n=pendAll.filter(e=>!RF[v]||RF[v].includes(e.st)).length,a=s.revFilter===v;return{label:label+' · '+n,on:a,bg:a?'var(--color-accent)':'var(--color-neutral-100)',fg:a?'var(--color-bg)':'inherit',pick:()=>this.setState({revFilter:v,detailId:null,done:null,edit:null})};}),
+      queue:queue.map(q=>({...deco(q),bg:q.id===curId?'var(--color-accent-100)':'var(--color-surface)',ring:q.id===curId?'0 0 0 2px var(--color-accent)':'none',open:()=>this.openDetail(q.id)})),
+      hint:isMobile?'':'Atajos: J / K para moverte · Enter para la acción principal'};
+    let d=null;const e0=curId&&L.find(x=>x.id===curId);
+    if(e0){
+      const e=e0,ed=s.edit,canEdit=co.role!=='Supervisor'||true;
+      const cats=uniq(P.v.map(v=>v[1])),projs=['Sin proyecto',...P.p];
+      const isErr=e.st==='err';
+      const aiRaw=isErr?[]:[['Monto',98],['Fecha',95],['Proveedor',92],['RUC',e.ruc?90:0],['Categoría',81],['Proyecto',P.p.length?(e.proj?68:0):null]].filter(a=>a[1]!==null);
+      const act=(label,icon,cls,run,color='inherit')=>({label,icon,cls,run,color});
+      const startEdit=()=>this.setState({edit:{desc:e.desc,prov:e.prov,ruc:e.ruc,amt:String(e.amt),cat:e.cat,type:e.type,proj:e.proj||'Sin proyecto',pay:e.pay}});
+      const confirm=()=>{
+        const p={st:'ok'};
+        if(ed){const a=parseFloat(String(ed.amt).replace(/[^0-9.]/g,''));if(!a){this.showToast('Ingresa un monto válido.','ph-duotone ph-warning-circle');return;}
+          if(e.st==='info'&&ed.type==='Empresarial'&&!/^\d{11}$/.test(ed.ruc.trim())){this.showToast('Ingresa un RUC de 11 dígitos para un gasto empresarial.','ph-duotone ph-warning-circle');return;}
+          Object.assign(p,{desc:ed.desc,prov:ed.prov,ruc:ed.ruc.trim(),amt:a,cat:ed.cat,type:ed.type,proj:ed.proj==='Sin proyecto'?'':ed.proj,pay:ed.pay});}
+        this.patch(e.id,p);this.setState({edit:null,done:e.id});this.advance(e.id);this.showToast(e.id+' registrado (solo en esta demostración).','ph-duotone ph-check-circle');
+      };
+      let actions=[];
+      if(ed)actions=[act('Guardar y confirmar','ph-duotone ph-check','btn btn-primary',confirm),act('Cancelar','ph-duotone ph-x','btn btn-ghost',()=>this.setState({edit:null}))];
+      else if(e.st==='pend')actions=[act('Confirmar registro','ph-duotone ph-check','btn btn-primary',confirm),act('Corregir datos','ph-duotone ph-pencil-simple','btn btn-secondary',startEdit)];
+      else if(e.st==='info')actions=[act('Completar datos','ph-duotone ph-pencil-simple','btn btn-primary',startEdit)];
+      else if(e.st==='dup')actions=[act('Conservar ambos','ph-duotone ph-copy','btn btn-primary',()=>{this.patch(e.id,{st:'ok',dupOf:null});this.setState({done:e.id});this.advance(e.id);this.showToast('Se conservaron ambos gastos (demostración).','ph-duotone ph-check-circle');}),act('Descartar este gasto','ph-duotone ph-trash','btn btn-secondary',()=>{this.patch(e.id,{st:'desc'});this.advance(e.id);this.showToast(e.id+' descartado como duplicado (demostración).','ph-duotone ph-trash');},'var(--color-accent-2-700)')];
+      else if(isErr)actions=[act('Reintentar lectura','ph-duotone ph-arrow-clockwise','btn btn-primary',()=>{this.patch(e.id,{st:'proc'});this.openDetail(e.id);}),act('Completar manualmente','ph-duotone ph-pencil-simple','btn btn-secondary',startEdit)];
+      else if(e.st==='ok'&&canEdit)actions=[act('Editar','ph-duotone ph-pencil-simple','btn btn-secondary',startEdit)];
+      if(e.ev.length&&!ed)actions.push(act('Ver comprobantes','ph-duotone ph-files','btn btn-ghost',()=>this.setState({preview:{id:e.id,j:0}})));
+      this._primary=actions.length?actions[0].run:null;
+      const B={proc:['ph-duotone ph-circle-notch','Procesando con IA','Extrayendo monto, proveedor y categoría del mensaje recibido.','var(--color-neutral-100)','var(--color-neutral-700)'],
+        pend:['ph-duotone ph-sparkle','Revisa la clasificación sugerida','La IA completó los datos. Confirma o corrige solo lo que no coincida.','var(--color-accent-100)','var(--color-accent)'],
+        info:['ph-duotone ph-warning-circle','Requiere información','Falta el RUC del proveedor para registrar este gasto empresarial.','var(--color-accent-2-100)','var(--color-accent-2)'],
+        dup:['ph-duotone ph-copy','Posible duplicado','Coincide en proveedor, monto y medio de pago con '+(e.dupOf||'otro gasto')+'. Decide si conservar ambos.','var(--color-accent-2-100)','var(--color-accent-2)'],
+        err:['ph-duotone ph-x-circle','Error de procesamiento','No se pudo leer el comprobante. Reintenta, pide otra foto por Telegram o completa los datos.','var(--color-accent-2-100)','var(--color-accent-2)'],
+        desc:['ph-duotone ph-trash','Gasto descartado','Marcado como duplicado. No se incluye en totales. (Demostración)','var(--color-neutral-100)','var(--color-neutral-700)']};
+      let b=B[e.st];if(s.done===e.id&&e.st==='ok')b=['ph-duotone ph-check-circle','Registrado','Cambio aplicado solo en esta demostración. No se guardó en ningún servidor.','var(--color-accent-100)','var(--color-accent)'];
+      const orig=e.dupOf&&L.find(x=>x.id===e.dupOf);
+      const dr=x=>[{l:'ID',v:x.id},{l:'Fecha',v:fd(x.date)},{l:'Proveedor',v:x.prov},{l:'Monto',v:money(x.amt)},{l:'Medio',v:x.pay},{l:'Registró',v:x.user}];
+      const inp=(l,key,opts,span=1)=>({l,span,isSel:!!opts,isText:!opts,opts:(opts||[]).map(v=>({v,sel:ed&&ed[key]===v})),value:ed?ed[key]:'',ring:e.st==='info'&&key==='ruc'?'0 0 0 2px var(--color-accent-2)':'none',set:ev=>{const v=ev.target.value;this.setState(x=>({edit:{...x.edit,[key]:v}}));}});
+      d={...deco(e),showBack:!isRev0,channel:e.channel,banner:!!b,bannerIcon:b&&b[0],bannerTitle:b&&b[1],bannerText:b&&b[2],bannerBg:b&&b[3],bannerColor:b&&b[4],actions,
+        isDup:e.st==='dup'&&!!orig,dupCols:orig?[{title:'Nuevo — '+e.channel,bg:'var(--color-accent-2-100)',rows:dr(e)},{title:'Existente — registrado',bg:'var(--color-surface)',rows:dr(orig)}]:[],
+        viewMode:!ed,editMode:!!ed,
+        fields:[['Descripción',e.desc],['Proveedor',e.prov],['RUC',e.ruc||'Falta'],['Fecha',fd(e.date)+' 2026'],['Categoría',e.cat],['Tipo',e.type],['Proyecto o pedido',e.proj||'—'],['Medio de pago',e.pay],['Moneda','Soles (PEN)'],['Registró',e.user]].map(([l,v])=>({l,v,color:v==='Falta'?'var(--color-accent-2-700)':'inherit'})),
+        inputs:[inp('Descripción','desc',null,2),inp('Proveedor','prov'),inp('RUC','ruc'),inp('Monto (S/)','amt'),inp('Categoría','cat',cats),inp('Tipo','type',['Empresarial','Personal']),inp('Medio de pago','pay',PAYS),...(P.p.length?[inp('Proyecto o pedido','proj',projs,2)]:[])],
+        files:e.ev.map((f,j)=>({...f,icon:KIND[f.k][1],group:KIND[f.k][0],gCls:GCLS[KIND[f.k][0]],open:()=>this.setState({preview:{id:e.id,j}})})),noFiles:!e.ev.length,
+        ai:aiRaw.map(([l,p])=>({l,pct:p?p+'%':'—',w:p+'%',c:p<75?'var(--color-accent-2)':'var(--color-accent)',tc:p<75?'var(--color-accent-2-700)':'inherit'})),
+        aiNote:isErr?'No se extrajeron datos del archivo recibido.':'Barras en magenta: confianza baja, conviene revisar.',
+        log:[{t:fd(e.date)+' 09:14',x:'Recibido por '+e.channel+' de '+e.user},...(e.st==='proc'?[]:[{t:fd(e.date)+' 09:14',x:isErr?'La lectura automática falló':'Datos extraídos y clasificados por IA'}]),...(e.st==='ok'?[{t:s.done===e.id?'Ahora':fd(e.date)+' 11:02',x:'Registro confirmado'+(s.done===e.id?' (demostración)':'')}]:[])]};
+    }
+    // files
+    const fq=s.fq.trim().toLowerCase();
+    const files=[];L.forEach(e=>e.ev.forEach((f,j)=>files.push({e,f,j})));
+    const fList=files.filter(({e,f})=>(!s.fGroup||KIND[f.k][0]===s.fGroup)&&(!fq||(e.prov+' '+f.file).toLowerCase().includes(fq))).map(({e,f,j})=>{const g=KIND[f.k][0];return{k:f.k,group:g,gCls:GCLS[g],icon:KIND[f.k][1],iColor:g==='Comprobante'?'var(--color-accent)':'var(--color-neutral-700)',prov:e.prov,dateL:fd(e.date),amtL:money(e.amt),open:()=>this.setState({preview:{id:e.id,j}})};});
+    let pv=null;
+    if(s.preview){const e=L.find(x=>x.id===s.preview.id),f=e&&e.ev[s.preview.j];
+      if(f){const g=KIND[f.k][0];pv={k:f.k,group:g,gCls:GCLS[g],file:f.file,channel:e.channel,prov:e.prov,rucL:e.ruc||'—',dateL:fd(e.date)+' 2026',amtL:money(e.amt),desc:e.desc,op:e.op,
+        isDoc:g==='Comprobante',isPay:g==='Pago',isPhoto:f.k==='Foto',isAudio:f.k==='Audio',docTitle:f.k==='Factura'?'Factura electrónica':'Boleta de venta electrónica',docNum:(f.k==='Factura'?'F001-':'B001-')+e.op.slice(0,6),
+        transcript:'Gasté '+e.amt.toFixed(2).replace('.',' con ')+' soles en '+e.prov+', '+e.desc.toLowerCase()+', pagué con '+e.pay.toLowerCase()+'.',
+        canGo:!(s.page==='gastos'&&s.detailId===e.id),go:()=>this.openDetail(e.id)};}}
+    // providers
+    const pq=s.pq.trim().toLowerCase(),pm={};
+    L.filter(e=>e.st!=='desc').forEach(e=>{const p=pm[e.prov]||(pm[e.prov]={name:e.prov,ruc:e.ruc,n:0,total:0,last:e.date,cats:{}});p.n++;p.total+=e.amt;if(e.date>p.last)p.last=e.date;if(e.ruc)p.ruc=e.ruc;p.cats[e.cat]=(p.cats[e.cat]||0)+1;});
+    const provs=Object.values(pm).filter(p=>!pq||(p.name+' '+p.ruc).toLowerCase().includes(pq)).sort((a,b)=>b.total-a.total).map(p=>({...p,rucL:p.ruc||'Sin RUC',totalL:money(p.total),lastL:fd(p.last),cat:Object.entries(p.cats).sort((a,b)=>b[1]-a[1])[0][0],history:()=>{this.setState({gq:p.name,gpage:0,gTab:'all',gf:{st:'',cat:'',type:'',pay:''}});this.go('gastos');}}));
+    // projects
+    const pjm={};L.filter(e=>e.proj&&e.st!=='desc').forEach(e=>(pjm[e.proj]=pjm[e.proj]||[]).push(e));
+    const kindOf=n=>n.startsWith('Pedido')?'Pedido':'Proyecto';
+    const projs=Object.entries(pjm).map(([name,rs])=>{const cost=rs.reduce((a,e)=>a+e.amt,0),last=rs.reduce((a,e)=>e.date>a?e.date:a,rs[0].date);return{name,kind:kindOf(name),costL:money(cost),n:rs.length,lastL:fd(last),segs:catBreak(rs),open:()=>this.setState({projId:name})};});
+    let pd=null;
+    if(s.projId&&pjm[s.projId]){const rs=pjm[s.projId].slice().sort((a,b)=>b.date-a.date),cost=rs.reduce((a,e)=>a+e.amt,0);
+      pd={name:s.projId,kind:kindOf(s.projId),kpis:[{l:'Costo acumulado',v:money(cost)},{l:'Gastos asociados',v:String(rs.length)},{l:'Última operación',v:fd(rs[0].date)}],cats:catBreak(rs),rows:rs.map(deco)};}
+    const isG=on&&s.page==='gastos';
+    return {
+      pendingN,
+      showList:isG&&!d,showDetail:(isG||isRev0)&&!!d,d:d||{},showRev:isRev0,rev,goDash:()=>this.go('dashboard'),
+      gTabs:[['all','Todos ('+L.length+')'],['rev','Por revisar ('+pendingN+')']].map(([v,label])=>({label,on:s.gTab===v,pick:()=>this.setState({gTab:v,gpage:0})})),
+      gq:s.gq,onGq:ev=>this.setState({gq:ev.target.value,gpage:0}),
+      gFilters:[{label:'Estado',value:s.gf.st,set:setF('st'),opts:opt(s.gf.st,'Todos los estados',Object.keys(STAT),v=>STAT[v][0])},{label:'Categoría',value:s.gf.cat,set:setF('cat'),opts:opt(s.gf.cat,'Todas las categorías',uniq(P.v.map(v=>v[1])))},{label:'Tipo',value:s.gf.type,set:setF('type'),opts:opt(s.gf.type,'Personal y empresarial',['Empresarial','Personal'])},{label:'Medio de pago',value:s.gf.pay,set:setF('pay'),opts:opt(s.gf.pay,'Todos los medios',PAYS)}],
+      gHasFilters:!!(s.gq||s.gf.st||s.gf.cat||s.gf.type||s.gf.pay),clearFilters:()=>this.setState({gq:'',gf:{st:'',cat:'',type:'',pay:''},gpage:0}),
+      gCountLabel:rows.length+' gastos'+(co.role==='Empleado'?' registrados por ti':'')+' · demostración',
+      gCols:[col('Fecha','date'),col('Descripción'),col('Proveedor','prov'),col('Categoría'),col('Tipo'),col('Proyecto'),col('Medio de pago'),col('Monto','amt','right'),col('Estado')],
+      gRows:rows.slice(pg*PER,pg*PER+PER).map(deco),gTable:!isMobile,gCards:isMobile,gEmpty:!rows.length,
+      gPageLabel:rows.length?(pg*PER+1)+'–'+Math.min(rows.length,pg*PER+PER)+' de '+rows.length:'',gPrevDis:pg===0,gNextDis:pg>=pages-1,
+      gPrev:()=>this.setState({gpage:pg-1}),gNext:()=>this.setState({gpage:pg+1}),
+      backToList:()=>this.setState({detailId:null,edit:null,done:null}),
+      showFiles:on&&s.page==='comprobantes',fq:s.fq,onFq:ev=>this.setState({fq:ev.target.value}),fList,fEmpty:!fList.length,
+      fGroups:[['','Todos','ph-duotone ph-files'],['Comprobante','Comprobantes','ph-duotone ph-receipt'],['Pago','Pagos','ph-duotone ph-device-mobile'],['Evidencia','Evidencias','ph-duotone ph-camera']].map(([v,label,icon])=>({label,icon,on:s.fGroup===v,pick:()=>this.setState({fGroup:v})})),
+      pv,closePreview:()=>this.setState({preview:null}),stop:ev=>ev.stopPropagation(),
+      wave:Array.from({length:40},(_,i)=>(20+Math.abs(Math.sin(i*1.7)*70+Math.cos(i*.6)*10)).toFixed(0)+'%'),
+      showProv:on&&s.page==='proveedores',pq:s.pq,onPq:ev=>this.setState({pq:ev.target.value}),provs,
+      showProj:on&&s.page==='proyectos'&&!pd,projs,noProjs:!projs.length,showProjDetail:on&&s.page==='proyectos'&&!!pd,pd:pd||{},backToProjs:()=>this.setState({projId:null})
+    };
+  }
+  phase6(co){
+    const s=this.state,on=!s.loading,L=this.list().filter(e=>e.st!=='desc'),P=POOLS[co.id],cid=co.id,toast=(t,i)=>this.showToast(t,i);
+    // categories
+    const base=[...new Set(P.v.map(v=>v[1]))],extra=s.catExtra[cid]||[];
+    const catRows=[...base,...extra].map(name=>{const rs=L.filter(e=>e.cat===name),provs=[...new Set(P.v.filter(v=>v[1]===name).map(v=>v[0]))],k=cid+'|'+name,off=!!s.catOff[k];
+      return{name,isNew:extra.includes(name),on:!off,op:off?.5:1,meta:rs.length+' gastos · '+money(rs.reduce((a,e)=>a+e.amt,0)),rule:provs.length?'Sugerida para '+provs.join(', '):'Sin reglas aún: la IA aprenderá de tus correcciones',toggle:()=>this.setState(x=>({catOff:{...x.catOff,[k]:!off}}))};});
+    const addCat=()=>{const n=s.newCat.trim();if(!n)return;if([...base,...extra].some(c=>c.toLowerCase()===n.toLowerCase())){toast('La categoría “'+n+'” ya existe.','ph-duotone ph-warning-circle');return;}this.setState(x=>({newCat:'',catExtra:{...x.catExtra,[cid]:[...(x.catExtra[cid]||[]),n]}}));toast('Categoría “'+n+'” agregada (demostración).','ph-duotone ph-check-circle');};
+    // reports
+    const days=s.rRange==='7'?7:s.rRange==='30'?30:999,cut=new Date(2026,8,28-days+1);
+    const R=L.filter(e=>e.date>=cut),tot=R.reduce((a,e)=>a+e.amt,0);
+    const DIMS=[['period','Período'],['cat','Categoría'],['prov','Proveedor'],['user','Usuario'],['proj','Proyecto'],['type','Personal / empresarial'],['pay','Medio de pago']].filter(d=>d[0]!=='proj'||P.p.length);
+    const dim=DIMS.some(d=>d[0]===s.rDim)?s.rDim:'cat';
+    let rRows=[],rBars=[];
+    if(dim==='period'){const m={};R.forEach(e=>{const k=+e.date;m[k]=(m[k]||0)+e.amt;});const ks=Object.keys(m).map(Number).sort((a,b)=>a-b),mx=Math.max(1,...Object.values(m));rBars=ks.map((k,i)=>({h:(m[k]/mx*100)+'%',lbl:ks.length>16&&i%3?'':String(new Date(k).getDate()),tip:fd(new Date(k))+' · '+money(m[k])}));}
+    else{const m={};R.forEach(e=>{const k=(dim==='proj'?e.proj||'Sin proyecto':e[dim]);m[k]=(m[k]||0)+e.amt;});rRows=Object.entries(m).sort((a,b)=>b[1]-a[1]).map(([name,a],i)=>({name,amt:money(a),pct:(a/tot*100).toFixed(0)+'%',w:(a/tot*100)+'%',color:i===0?'var(--color-accent)':'var(--color-neutral-500)'}));}
+    // members
+    const myRole=co.role,isOwner=myRole==='Propietario',canManage=['Propietario','Administrador'].includes(myRole);
+    const mem=[...(MEMBERS[cid]||[]).map(m=>({name:m[0],email:m[1],role:m[2],inv:m[3],acc:m[4],me:!!m[5]})),...(s.invited[cid]||[])].map(m=>({...m,...(s.memOv[cid+'|'+m.email]||{})}));
+    const setM=(m,p)=>this.setState(x=>({memOv:{...x.memOv,[cid+'|'+m.email]:{...(x.memOv[cid+'|'+m.email]||{}),...p}}}));
+    const members=mem.map(m=>{const locked=m.me||(m.role==='Propietario'&&myRole!=='Propietario');const editable=canManage&&!locked;const actions=[];
+      if(canManage&&!locked){if(m.inv!=='Aceptada')actions.push({label:'Reenviar',color:'inherit',run:()=>{setM(m,{inv:'Pendiente'});toast('Invitación reenviada a '+m.email+' (demostración).','ph-duotone ph-paper-plane-tilt');}});
+        else if(m.acc==='Activa')actions.push({label:'Suspender',color:'var(--color-accent-2-700)',run:()=>{setM(m,{acc:'Suspendida'});toast(m.name+' suspendido en '+co.short+' (demostración).','ph-duotone ph-prohibit');}});
+        else actions.push({label:'Reactivar',color:'inherit',run:()=>{setM(m,{acc:'Activa'});toast(m.name+' reactivado (demostración).','ph-duotone ph-check-circle');}});}
+      return{...m,name:m.name+(m.me?' (tú)':''),ini:m.name.split(' ').map(w=>w[0]).slice(0,2).join(''),editable,fixed:!editable,op:m.acc==='Suspendida'?.6:1,
+        invCls:m.inv==='Aceptada'?'tag tag-outline':m.inv==='Pendiente'?'tag tag-accent':'tag tag-accent-2',inv:m.inv,
+        accCls:m.acc==='Activa'?'tag tag-outline':m.acc==='Suspendida'?'tag tag-accent-2':'tag tag-neutral',acc:m.acc==='—'?'Sin cuenta':m.acc,
+        roleOpts:(isOwner?ROLES:ROLES.slice(1)).map(v=>({v,sel:v===m.role})),setRole:ev=>{const v=ev.target.value;setM(m,{role:v});toast('Rol de '+m.name+' cambiado a '+v+' (demostración).','ph-duotone ph-user-switch');},actions};});
+    // company config
+    const cf={name:co.name,ruc:(ORGINFO[cid]||[])[0]||'',addr:(ORGINFO[cid]||[])[1]||'',cur:'Soles (PEN)',...(s.cfg[cid]||{})};
+    const setC=k=>ev=>{const v=ev.target.value;this.setState(x=>({cfg:{...x.cfg,[cid]:{...(x.cfg[cid]||{}),[k]:v}}}));};
+    const pr={auto:true,confirm:true,dup:true,learn:true,...(s.cfgPrefs[cid]||{})};
+    const tp=k=>()=>this.setState(x=>({cfgPrefs:{...x.cfgPrefs,[cid]:{...pr,[k]:!pr[k]}}}));
+    const mp={dup:true,rev:true,week:false,inv:true,...s.mePrefs},tm=k=>()=>this.setState(x=>({mePrefs:{...mp,[k]:!mp[k]}}));
+    const rv=on&&s.page;
+    return{
+      showCats:rv==='categorias',catRows,newCat:s.newCat,onNewCat:ev=>this.setState({newCat:ev.target.value}),onNewCatKey:ev=>{if(ev.key==='Enter')addCat();},addCat,addCatDis:!s.newCat.trim(),
+      showRep:rv==='reportes',
+      rRanges:[['7','Últimos 7 días'],['30','Últimos 30 días'],['all','Todo el historial']].map(([v,label])=>({label,on:s.rRange===v,pick:()=>this.setState({rRange:v})})),
+      rExports:[['PDF','ph-duotone ph-file-pdf'],['Excel','ph-duotone ph-microsoft-excel-logo'],['CSV','ph-duotone ph-file-csv']].map(([label,icon])=>({label,icon,run:()=>toast('Exportar '+label+': demostración, no se genera archivo.','ph-duotone ph-download-simple')})),
+      rKpis:[{l:'Total del período',v:money(tot)},{l:'Gastos',v:String(R.length)},{l:'Promedio por gasto',v:money(R.length?tot/R.length:0)}],
+      rDims:DIMS.map(([v,label])=>({label,on:dim===v,bg:dim===v?'var(--color-accent)':'var(--color-neutral-100)',fg:dim===v?'var(--color-bg)':'inherit',pick:()=>this.setState({rDim:v})})),
+      rTitle:'Gastos por '+DIMS.find(d=>d[0]===dim)[1].toLowerCase(),rIsPeriod:dim==='period'&&R.length>0,rIsBreak:dim!=='period'&&R.length>0,rEmpty:!R.length,rBars,rRows,
+      showUsers:rv==='usuarios',members,canManage,memCount:mem.length+' miembros en '+co.name,invRoleOpts:(isOwner?ROLES:ROLES.slice(1)).map(v=>({v,sel:s.inv&&s.inv.role===v})),memCols:this.state.w<1200?'40px minmax(0,1fr)':'40px minmax(0,1fr) 190px 170px 130px',memTagCol:this.state.w<1200?'2':'auto',
+      roleDocs:[['Propietario','Control total, facturación y transferencia de la organización.'],['Administrador','Gestiona miembros, categorías, proyectos y configuración.'],['Supervisor','Revisa y aprueba gastos de su equipo y proyectos.'],['Contador','Consulta todos los gastos, comprobantes y reportes; corrige clasificación.'],['Empleado','Registra y consulta solo sus propios gastos.']].map(([n,d])=>({n,d})),
+      inv:s.inv,openInvite:()=>this.setState({inv:{email:'',role:'Empleado'}}),closeInvite:()=>this.setState({inv:null}),
+      onInvEmail:ev=>{const v=ev.target.value;this.setState(x=>({inv:{...x.inv,email:v}}));},onInvRole:ev=>{const v=ev.target.value;this.setState(x=>({inv:{...x.inv,role:v}}));},
+      sendInvite:()=>{const em=(s.inv.email||'').trim();if(!/^\S+@\S+\.\S+$/.test(em)){toast('Ingresa un correo válido.','ph-duotone ph-warning-circle');return;}if(mem.some(m=>m.email===em)){toast('Ese correo ya es miembro.','ph-duotone ph-warning-circle');return;}
+        this.setState(x=>({inv:null,invited:{...x.invited,[cid]:[...(x.invited[cid]||[]),{name:em.split('@')[0],email:em,role:x.inv.role,inv:'Pendiente',acc:'—'}]}}));toast('Invitación a '+em+' creada (demostración, no se envió correo).','ph-duotone ph-paper-plane-tilt');},
+      showCfg:rv==='empresa',changeLogo:()=>toast('Carga de logotipo: demostración, no se sube ningún archivo.','ph-duotone ph-image'),
+      cfgFields:[{l:'Nombre comercial',v:cf.name,set:setC('name'),dis:false},{l:'RUC',v:cf.ruc,set:setC('ruc'),dis:!isOwner,note:isOwner?'':'Solo el propietario puede cambiar datos legales.'},{l:'Dirección fiscal',v:cf.addr,set:setC('addr'),dis:!isOwner},{l:'Moneda principal',v:cf.cur,set:setC('cur'),dis:true,note:'Otras monedas no están disponibles en esta versión.'}],
+      cfgPrefs:[['auto','Clasificar como empresarial si el comprobante tiene RUC','La IA marca el gasto como empresarial automáticamente.'],['confirm','Pedir confirmación para montos mayores a S/ 1,000','Los gastos grandes quedan pendientes de revisión.'],['dup','Detectar posibles duplicados','Compara proveedor, monto, fecha y medio de pago.'],['learn','Aprender de las correcciones','Las correcciones del equipo mejoran las sugerencias.']].map(([k,l,d])=>({l,d,on:pr[k],toggle:tp(k)})),
+      cfgLinks:[['Categorías','ph-duotone ph-tag','categorias'],['Proyectos y pedidos','ph-duotone ph-folders','proyectos'],['Miembros','ph-duotone ph-users','usuarios']].map(([label,icon,p])=>({label,icon,go:()=>this.go(p)})),
+      saveDemo:()=>toast('Cambios aplicados solo en esta demostración.','ph-duotone ph-check-circle'),
+      showMe:rv==='personal',orgCount:String(COMPANIES.length),
+      mePrefs:[['dup','Posibles duplicados','Aviso inmediato cuando la IA detecta un duplicado.'],['rev','Gastos pendientes de revisión','Resumen diario de lo que falta revisar.'],['week','Resumen semanal por correo','Totales de la semana por organización.'],['inv','Invitaciones y cambios de rol','Cuando te agregan o cambian de rol en una organización.']].map(([k,l,d])=>({l,d,on:mp[k],toggle:tm(k)})),
+      meAcct:[['Cambiar contraseña','ph-duotone ph-key','inherit','Cambio de contraseña: demostración.'],['Cerrar sesión en todos los dispositivos','ph-duotone ph-devices','inherit','Sesiones cerradas: demostración.'],['Eliminar cuenta','ph-duotone ph-trash','var(--color-accent-2-700)','Eliminar cuenta: demostración, no se elimina nada.']].map(([label,icon,color,t])=>({label,icon,color,run:()=>toast(t,icon)}))
+    };
+  }
+  renderVals(){
+    const s=this.state,co=this.co(),isMobile=s.w<760,isTablet=s.w<1080;
+    const dark=s.theme==='dark'||(s.theme==='auto'&&s.sysDark);
+    const allowed=PERMS[co.role];
+    const q=s.coQuery.trim().toLowerCase();
+    const coList=COMPANIES.filter(c=>!q||c.name.toLowerCase().includes(q)).map(c=>({...c,active:c.id===s.coId,bg:c.id===s.coId?'var(--color-accent-100)':'transparent',pick:()=>this.switchTo(c.id)}));
+    const navGroups=GROUPS.map(g=>({label:g.label,items:g.ids.filter(id=>allowed.includes(id)).map(id=>{const p=PAGES[id],on=id===s.page;return{...p,current:on?'page':undefined,bg:on?'var(--color-accent-100)':'transparent',fg:on?'var(--color-accent-900)':'inherit',fw:on?600:400,badge:id==='revision'?(n=>n?String(n):'')(this.list().filter(e=>!['ok','desc'].includes(e.st)).length):'',go:()=>this.go(id)};})})).filter(g=>g.items.length);
+    const notifs=(NOTIFS[co.id]||[]).map(n=>({...n,color:n.c==='a2'?'var(--color-accent-2)':'var(--color-accent)'}));
+    const setTheme=t=>{this.setState({theme:t});this.save({theme:t});};
+    const tog=k=>()=>this.setState(x=>({open:x.open===k?null:k,coQuery:''}));
+    return {
+      themeCls:dark?'theme-dark':'',isMobile,co,page:PAGES[s.page],
+      sidePos:isMobile?'fixed':'sticky',sideTx:isMobile&&!s.drawer?'translateX(-105%)':'none',
+      scrimOn:!!s.open||(isMobile&&s.drawer),scrimBg:isMobile&&s.drawer?'rgba(0,0,0,.4)':'transparent',
+      closeAll:()=>this.setState({open:null,drawer:false}),openDrawer:()=>this.setState({drawer:true}),
+      companyOpen:s.open==='company',toggleCompany:tog('company'),coQuery:s.coQuery,onCoQuery:e=>this.setState({coQuery:e.target.value}),
+      coList,coEmpty:coList.length===0&&!'gastos personales'.includes(q),
+      pickPersonal:()=>this.switchTo('personal'),personalActive:s.coId==='personal',personalBg:s.coId==='personal'?'var(--color-accent-100)':'transparent',
+      navGroups,
+      searchDisplay:isMobile?'none':'block',
+      onSearchKey:e=>{const v=e.target.value.trim();if(e.key==='Enter'&&v){this.go('gastos');this.setState({gq:v,gpage:0,gTab:'all'});}},
+      onSearchBtn:()=>this.go('gastos'),
+      notifOpen:s.open==='notif',toggleNotif:tog('notif'),notifs,noNotifs:!notifs.length,notifCount:notifs.length?String(notifs.length):'',
+      profileOpen:s.open==='profile',toggleProfile:tog('profile'),
+      themeSegDisplay:isTablet?'none':'inline-flex',
+      themeOpts:[['light','Claro','ph-duotone ph-sun'],['dark','Oscuro','ph-duotone ph-moon'],['auto','Auto','ph-duotone ph-desktop']].map(([v,label,icon])=>({label,icon,on:s.theme===v,pick:()=>setTheme(v)})),
+      goPersonalSettings:()=>this.go('personal'),
+      logout:()=>{this.setState({open:null});this.showToast('Cierre de sesión simulado: no hay backend conectado','ph-duotone ph-sign-out');},
+      loading:s.loading,ready:!s.loading,
+      ...this.phase5(co,isMobile,allowed),...this.phase6(co),
+      showDash:!s.loading&&s.page==='dashboard',showGeneric:false,
+      dash:buildDash(co,s.hi,i=>this.setState({hi:i}),f=>{this.go('revision');this.setState({revFilter:f==='proc'?'pend':f});}),dayLeave:()=>this.setState({hi:null}),
+      onRegister:()=>this.showToast('Los gastos se registran enviando foto, audio o texto por Telegram. Demostración: no se crea ningún registro.','ph-duotone ph-telegram-logo'),
+      goReview:()=>{this.go('revision');this.setState({revFilter:'all'});},goGastos:()=>this.go('gastos'),goReports:()=>allowed.includes('reportes')?this.go('reportes'):this.showToast('Tu rol no tiene acceso a Reportes en '+co.short,'ph-duotone ph-lock'),
+      toast:s.toast,hideToast:()=>this.setState({toast:null}),toastLeft:isMobile?'var(--space-4)':'auto'
+    };
+  }
+}
+</script>
+</body>
+</html>
