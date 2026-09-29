@@ -1,7 +1,8 @@
-import { useEffect, useState, type CSSProperties, type MutableRefObject } from 'react';
+import { Fragment, useEffect, useState, type CSSProperties, type MutableRefObject } from 'react';
 import { getGasto } from '../api/endpoints';
 import { mapGasto } from '../api/mappers';
 import type { Evidence } from '../data/types';
+import { compararDuplicado, esComprobante, esPago } from '../data/duplicados';
 import { GROUP_CLS, KIND, PAYS, STAT } from '../data/expenses';
 import type { Expense, ExpenseType, Status } from '../data/types';
 import { currencySymbol, fd, money, uniq } from '../lib/format';
@@ -46,7 +47,7 @@ export default function ExpenseDetail({ expense: base, done, onDone, onResolved,
   onBack?: () => void;
   primaryRef?: MutableRefObject<(() => void) | null>;
 }) {
-  const { co, companies, personal, user, expenses, patchExpense, showToast, categories, pedidos } = useApp();
+  const { co, companies, personal, user, expenses, duplicados, patchExpense, showToast, categories, pedidos } = useApp();
   // Los archivos se piden con el gasto completo: trae la hora de cada comprobante y pago,
   // con la que se sabe qué foto es de la factura y cuál del pago.
   const [evFull, setEvFull] = useState<Evidence[] | null>(null);
@@ -60,6 +61,15 @@ export default function ExpenseDetail({ expense: base, done, onDone, onResolved,
     return () => { alive = false; };
   }, [base.id, base.empresaId, co.id, base.ev.length]);
   const e: Expense = evFull ? { ...base, ev: evFull } : base;
+  const [origEv, setOrigEv] = useState<Evidence[] | null>(null);
+  useEffect(() => {
+    if (!base.dupOf) return;
+    let alive = true;
+    getGasto(Number(base.dupOf), base.empresaId ?? Number(co.id))
+      .then((g) => { if (alive) setOrigEv(mapGasto(g).ev); })
+      .catch(() => { /* usa los archivos de la lista */ });
+    return () => { alive = false; };
+  }, [base.dupOf, base.empresaId, co.id]);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [preview, setPreview] = useState<number | null>(null);
   // Vista ampliada de un archivo del gasto original (comparación de duplicados).
@@ -98,41 +108,48 @@ export default function ExpenseDetail({ expense: base, done, onDone, onResolved,
     showToast('Gasto ' + e.id + ' registrado.', 'ph-check-circle');
   };
 
+  const conservarAmbos = () => {
+    patchExpense(e.id, { st: 'ok', dupOf: null }); onDone(); onResolved();
+    showToast('Se conservaron ambos gastos.', 'ph-check-circle');
+  };
+  const descartarEste = () => {
+    patchExpense(e.id, { st: 'desc' }); onResolved();
+    showToast('Gasto ' + e.id + ' marcado como duplicado.', 'ph-trash');
+  };
+  const restaurar = () => {
+    patchExpense(e.id, { st: 'ok', dupOf: null }); onResolved();
+    showToast('Gasto ' + e.id + ' restaurado: vuelve a sumar en los totales.', 'ph-check-circle');
+  };
+
   const act = (label: string, icon: string, cls: string, run: () => void, color?: string): Action => ({ label, icon, cls, run, color });
   let actions: Action[] = [];
   if (draft) actions = [act('Guardar y confirmar', 'ph-check', 'btn btn-primary', confirm), act('Cancelar', 'ph-x', 'btn btn-ghost', () => setDraft(null))];
   else if (e.st === 'pend') actions = [act('Confirmar registro', 'ph-check', 'btn btn-primary', confirm), act('Corregir datos', 'ph-pencil-simple', 'btn btn-secondary', startEdit)];
   else if (e.st === 'info') actions = [act('Completar datos', 'ph-pencil-simple', 'btn btn-primary', startEdit)];
   else if (e.st === 'dup') actions = [
-    act('Conservar ambos', 'ph-copy', 'btn btn-primary', () => {
-      patchExpense(e.id, { st: 'ok', dupOf: null }); onDone(); onResolved();
-      showToast('Se conservaron ambos gastos.', 'ph-check-circle');
-    }),
-    act('Descartar este gasto', 'ph-trash', 'btn btn-secondary', () => {
-      patchExpense(e.id, { st: 'desc' }); onResolved();
-      showToast('Gasto ' + e.id + ' marcado como duplicado.', 'ph-trash');
-    }, 'var(--color-accent-2-700)'),
+    act('Conservar ambos', 'ph-copy', 'btn btn-primary', conservarAmbos),
+    act('Descartar este gasto', 'ph-trash', 'btn btn-secondary', descartarEste, 'var(--color-accent-2-700)'),
   ];
   else if (isErr) actions = [act('Reintentar lectura', 'ph-arrow-clockwise', 'btn btn-primary', () => patchExpense(e.id, { st: 'proc' })), act('Completar manualmente', 'ph-pencil-simple', 'btn btn-secondary', startEdit)];
   else if (e.st === 'ok') actions = [act('Editar', 'ph-pencil-simple', 'btn btn-secondary', startEdit)];
-  else if (e.st === 'desc') actions = [act('No era duplicado', 'ph-arrow-counter-clockwise', 'btn btn-secondary', () => {
-    patchExpense(e.id, { st: 'ok', dupOf: null }); onResolved();
-    showToast('Gasto ' + e.id + ' restaurado: vuelve a sumar en los totales.', 'ph-check-circle');
-  })];
+  else if (e.st === 'desc') actions = [act('No era duplicado', 'ph-arrow-counter-clockwise', 'btn btn-secondary', restaurar)];
   if (e.ev.length && !draft) actions.push(act('Ver comprobantes', 'ph-files', 'btn btn-ghost', () => setPreview(0)));
   if (primaryRef) primaryRef.current = actions.length ? actions[0].run : null;
 
   let banner = bannerFor(e);
   if (done && e.st === 'ok') banner = ['ph-check-circle', 'Registrado', 'Cambio guardado.', 'var(--color-accent-100)', 'var(--color-accent)'];
 
-  const orig = e.dupOf ? expenses.find((x) => x.id === e.dupOf) : undefined;
-  const numeroDe = (x: Expense) => x.ev.filter((f) => f.k === 'Factura' || f.k === 'Boleta').map((f) => f.k + ' ' + f.file).join(', ');
-  const dupRows = (x: Expense) => [
-    ['ID', x.id], ['Fecha', fd(x.date)], ['Proveedor', x.prov || '—'], ['RUC', x.ruc || '—'], ['Comprobante', numeroDe(x) || '—'],
-    ['Monto', money(x.amt)], ['Medio', x.pay || '—'], ['Registró', x.user || '—'],
-  ];
-  // Imágenes para comparar: las fotos del gasto (con su índice en ev para abrir la vista previa).
-  const fotosDe = (x: Expense) => x.ev.map((f, j) => ({ f, j })).filter(({ f }) => f.url && f.k !== 'Audio');
+  const origBase = e.dupOf ? expenses.find((x) => x.id === e.dupOf) ?? duplicados.find((x) => x.id === e.dupOf) : undefined;
+  const orig: Expense | undefined = origBase && origEv ? { ...origBase, ev: origEv } : origBase;
+  const cmp = (e.st === 'dup' || e.st === 'desc') && orig ? compararDuplicado(e, orig) : null;
+  // Fotos por sección (con su índice en ev para abrir la vista previa). Si el gasto no tiene
+  // foto de comprobante, sus fotos sueltas se muestran en esa fila.
+  const fotos = (x: Expense, pred: (f: Evidence) => boolean) => x.ev.map((f, j) => ({ f, j })).filter(({ f }) => f.url && pred(f));
+  const fotosComprobante = (x: Expense) => {
+    const c = fotos(x, esComprobante);
+    return c.length ? c : fotos(x, (f) => f.k === 'Foto');
+  };
+  const hayPago = !!orig && (e.ev.some(esPago) || orig.ev.some(esPago));
   const [stLabel, stCls] = STAT[e.st];
 
   const fields: [string, string][] = [
@@ -192,33 +209,101 @@ export default function ExpenseDetail({ expense: base, done, onDone, onResolved,
         </div>
       </section>
 
-      {(e.st === 'dup' || e.st === 'desc') && orig && (
-        <div data-a="1" className="panel" style={{ gap: 12 }}>
-          <h3 className="panel-title">Comparación con el gasto existente</h3>
-          <span className="muted" style={{ fontSize: 13 }}>Compara las imágenes: toca una para verla en grande.</span>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,280px),1fr))', gap: 'var(--space-4)' }}>
-            {[{ title: 'Nuevo — ' + e.channel, bg: 'var(--color-accent-2-100)', x: e, open: setPreview }, { title: 'Existente — registrado', bg: 'var(--color-surface)', x: orig, open: setOrigPreview }].map((c) => (
-              <div key={c.title} className="stack" style={{ gap: 6, padding: 'var(--space-3)', background: c.bg, borderRadius: 'var(--radius-md)' }}>
-                <div className="muted" style={{ fontSize: 13 }}>{c.title}</div>
-                {fotosDe(c.x).length > 0 ? (
-                  <div className="stack" style={{ gap: 6, marginBottom: 6 }}>
-                    {fotosDe(c.x).map(({ f, j }) => (
-                      <button key={f.file} onClick={() => c.open(j)} title="Ver en grande"
-                        style={{ border: 0, padding: 0, cursor: 'zoom-in', background: 'var(--color-neutral-200)', borderRadius: 'var(--radius-md)', overflow: 'hidden', display: 'block' }}>
-                        <img src={f.url!} alt={'Imagen del gasto ' + c.x.id} loading="lazy" style={{ width: '100%', height: 320, objectFit: 'contain', display: 'block' }} />
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="muted" style={{ height: 120, display: 'grid', placeItems: 'center', fontSize: 13, background: 'var(--fill)', borderRadius: 'var(--radius-md)', marginBottom: 6 }}>Sin imagen (registrado por texto o audio)</div>
-                )}
-                {dupRows(c.x).map(([l, v]) => (
-                  <div key={l} className="row" style={{ justifyContent: 'space-between', gap: 'var(--space-2)', fontSize: 14 }}>
-                    <span className="muted">{l}</span><span style={{ fontWeight: 600, textAlign: 'right' }}>{v}</span>
-                  </div>
-                ))}
+      {cmp && orig && (
+        <div data-a="1" className="panel" style={{ gap: 14 }}>
+          <div className="row wrap" style={{ justifyContent: 'space-between', gap: 8 }}>
+            <h3 className="panel-title">Comparación con el gasto existente</h3>
+            <span className="muted" style={{ fontSize: 12.5 }}>Toca una foto para verla en grande</span>
+          </div>
+          <div className="stack" style={{ gap: 8 }}>
+            <span className="row wrap" style={{ gap: 6, fontSize: 13 }}>
+              <span className={cmp.nivel === 'alta' ? 'tag tag-accent-2' : 'tag tag-neutral'}><Icon n="ph-copy" /> Duplicado detectado · confianza {cmp.nivel}</span>
+              <span>{cmp.motivo}</span>
+            </span>
+            {cmp.coinciden.length > 0 && (
+              <div className="row wrap" style={{ gap: 6 }}>
+                <span className="muted" style={{ fontSize: 13, minWidth: 74 }}>Coinciden</span>
+                {cmp.coinciden.map((t) => <span key={t} className="tag dup-ok"><Icon n="ph-check" /> {t}</span>)}
+              </div>
+            )}
+            {cmp.difieren.length > 0 && (
+              <div className="row wrap" style={{ gap: 6 }}>
+                <span className="muted" style={{ fontSize: 13, minWidth: 74 }}>Difieren</span>
+                {cmp.difieren.map((t) => <span key={t} className="tag dup-no">≠ {t}</span>)}
+              </div>
+            )}
+          </div>
+
+          <div className="dup-grid">
+            <div className="dup-h" />
+            <div className="dup-h dup-nuevo">Nuevo — #{e.id}<span className="muted">{e.channel} · {e.user || '—'}</span></div>
+            <div className="dup-h dup-exist">Existente — #{orig.id}<span className="muted">{orig.channel} · {orig.user || '—'}</span></div>
+
+            <div className="dup-sec">Comprobante de compra</div>
+            <div className="dup-lbl">Foto</div>
+            {[{ x: e, open: setPreview, falta: 'Sin foto del comprobante' }, { x: orig, open: setOrigPreview, falta: 'Sin foto del comprobante' }].map((c, i) => (
+              <div key={i} className="dup-foto">
+                {fotosComprobante(c.x).length ? fotosComprobante(c.x).map(({ f, j }) => (
+                  <button key={j} className="dup-img" onClick={() => c.open(j)} title="Ver en grande">
+                    <img src={f.url!} alt={f.k + ' del gasto ' + c.x.id} loading="lazy" />
+                    <span className="dup-zoom"><Icon n="ph-arrows-out" /> Ampliar</span>
+                  </button>
+                )) : <div className="dup-vacio">{c.falta}</div>}
               </div>
             ))}
+
+            {hayPago && (
+              <>
+                <div className="dup-sec">Pago</div>
+                <div className="dup-lbl">Constancia</div>
+                {[{ x: e, open: setPreview }, { x: orig, open: setOrigPreview }].map((c, i) => (
+                  <div key={i} className="dup-foto">
+                    {fotos(c.x, esPago).length ? fotos(c.x, esPago).map(({ f, j }) => (
+                      <button key={j} className="dup-img dup-img-pago" onClick={() => c.open(j)} title="Ver en grande">
+                        <img src={f.url!} alt={'Pago con ' + f.k + ' del gasto ' + c.x.id} loading="lazy" />
+                        <span className="dup-zoom"><Icon n="ph-arrows-out" /> Ampliar</span>
+                      </button>
+                    )) : <div className="dup-vacio dup-vacio-pago">{c.x.ev.some(esPago) ? 'Sin foto del pago' : 'Sin pago registrado'}</div>}
+                  </div>
+                ))}
+              </>
+            )}
+
+            <div className="dup-sec">Datos</div>
+            {cmp.filas.map((f) => (
+              <Fragment key={f.campo}>
+                <div className="dup-lbl">{f.campo}</div>
+                {[f.nuevo, f.existente].map((v, i) => (
+                  <div key={i} className={'dup-val' + (f.igual === false ? ' diff' : '') + (f.igual === null ? ' neutral' : '')}>
+                    <span>{v || '—'}</span>
+                    {f.igual !== null && <span className={'dup-ico ' + (f.igual ? 'ok' : 'no')} aria-label={f.igual ? 'Coincide' : 'Difiere'}>{f.igual ? '✓' : '≠'}</span>}
+                  </div>
+                ))}
+              </Fragment>
+            ))}
+          </div>
+
+          <div className="dup-decide">
+            {e.st === 'dup' ? (
+              <>
+                <div className="stack" style={{ gap: 2 }}>
+                  <strong>¿Es el mismo gasto?</strong>
+                  <span className="muted" style={{ fontSize: 13 }}>Si lo descartas, el #{e.id} no suma en los totales y queda en Gastos → Duplicados.</span>
+                </div>
+                <div className="row wrap" style={{ gap: 8 }}>
+                  <button className="btn btn-secondary" onClick={conservarAmbos}>No, son distintos — conservar ambos</button>
+                  <button className="btn btn-primary" onClick={descartarEste}>Sí, es el mismo — descartar #{e.id}</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="stack" style={{ gap: 2 }}>
+                  <strong>Descartado como duplicado del #{orig.id}</strong>
+                  <span className="muted" style={{ fontSize: 13 }}>No suma en los totales. Si no era el mismo gasto, restáuralo.</span>
+                </div>
+                <button className="btn btn-secondary" onClick={restaurar}><Icon n="ph-arrow-counter-clockwise" /> No era duplicado</button>
+              </>
+            )}
           </div>
         </div>
       )}

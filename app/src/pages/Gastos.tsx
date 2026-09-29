@@ -4,6 +4,7 @@ import ExpenseDetail from '../components/ExpenseDetail';
 import { showRegisterInfo } from '../components/Layout';
 import { Icon, SearchInput, Seg, Select } from '../components/ui';
 import { ALERT_STATUSES, isPending, PAYS, STAT } from '../data/expenses';
+import { compararDuplicado } from '../data/duplicados';
 import type { Expense, Status } from '../data/types';
 import { fd, money, uniq } from '../lib/format';
 import { useViewport } from '../hooks/useViewport';
@@ -37,6 +38,40 @@ function GastosList() {
   const { expenses, duplicados, pendingCount } = app;
   // Duplicados: los posibles (por revisar) y los ya descartados (no suman en totales).
   const dupRows = useMemo(() => [...expenses.filter((e) => e.st === 'dup'), ...duplicados], [expenses, duplicados]);
+  // Por qué se detectó cada duplicado y con qué gasto coincide.
+  const deteccion = useMemo(() => {
+    const todos = [...expenses, ...duplicados];
+    const m = new Map<string, { motivo: string; nivel: 'alta' | 'media'; origId: string; origUser: string }>();
+    for (const e of dupRows) {
+      if (!e.dupOf) continue;
+      const o = todos.find((x) => x.id === e.dupOf);
+      const c = o ? compararDuplicado(e, o) : null;
+      const base = c ? c.motivo.replace(/ que el gasto #.*$/, '') : 'Coincide';
+      m.set(e.id, { motivo: base, nivel: c?.nivel ?? 'media', origId: e.dupOf, origUser: o?.user ?? '' });
+    }
+    return m;
+  }, [expenses, duplicados, dupRows]);
+  const deteccionDe = (e: Expense) => {
+    const d = deteccion.get(e.id);
+    if (!d) return <span className="ellipsis" style={{ display: 'block' }}>{e.desc}</span>;
+    const confirmado = e.st === 'desc';
+    return (
+      <span className="stack" style={{ gap: 4, alignItems: 'flex-start' }}>
+        <span className={confirmado ? 'tag tag-neutral' : 'tag tag-accent-2'} style={{ fontWeight: 600 }}>
+          <Icon n="ph-copy" /> {confirmado ? 'Duplicado descartado' : 'Duplicado detectado · confianza ' + d.nivel}
+        </span>
+        <span style={{ fontSize: 12.5, color: 'var(--color-neutral-800)', whiteSpace: 'normal', textAlign: 'left' }}>
+          {d.motivo} que el{' '}
+          <span role="link" tabIndex={0} style={{ color: 'var(--color-accent)', fontWeight: 600, cursor: 'pointer' }}
+            onClick={(ev) => { ev.stopPropagation(); navigate('/gastos/' + d.origId); }}
+            onKeyDown={(ev) => { if (ev.key === 'Enter') { ev.stopPropagation(); navigate('/gastos/' + d.origId); } }}>
+            gasto #{d.origId}{d.origUser ? ' de ' + d.origUser : ''} ↗
+          </span>
+          {confirmado ? ' · no suma en totales' : ''}
+        </span>
+      </span>
+    );
+  };
   const navigate = useNavigate();
   const { isMobile } = useViewport();
   const [params, setParams] = useSearchParams();
@@ -84,10 +119,15 @@ function GastosList() {
     { label: 'Medio de pago', value: f.pay, set: setFilter('pay'), all: 'Todos los medios', opts: PAYS.map((v) => ({ v })) },
   ];
   const cols: { label: string; k?: SortKey; align?: 'right' }[] = [
-    { label: 'Fecha', k: 'date' }, { label: 'Descripción' }, { label: 'Proveedor', k: 'prov' }, { label: 'Categoría' }, { label: 'Tipo' },
+    { label: 'Fecha', k: 'date' }, { label: tab === 'dup' ? 'Detección' : 'Descripción' }, { label: 'Proveedor', k: 'prov' }, { label: 'Categoría' }, { label: 'Tipo' },
     { label: 'Proyecto' }, { label: 'Medio de pago' }, { label: 'Monto', k: 'amt', align: 'right' }, { label: 'Estado' },
   ];
   const rowBg = (e: Expense) => (ALERT_STATUSES.includes(e.st) ? 'var(--color-accent-2-100)' : undefined);
+  const rowStyle = (e: Expense) => ({
+    background: rowBg(e),
+    ...(tab === 'dup' && e.st === 'dup' ? { boxShadow: 'inset 3px 0 0 var(--color-accent-2)' } : {}),
+    ...(e.st === 'desc' ? { opacity: 0.75 } : {}),
+  });
 
   return (
     <div className="stack" style={{ gap: 'var(--space-4)' }}>
@@ -134,15 +174,15 @@ function GastosList() {
             </thead>
             <tbody>
               {visible.map((e) => (
-                <tr key={e.id} className="clickable" onClick={() => open(e.id)} style={{ background: rowBg(e) }}>
+                <tr key={e.id} className="clickable" onClick={() => open(e.id)} style={rowStyle(e)}>
                   <td className="nowrap">{fd(e.date)}</td>
-                  <td style={{ maxWidth: 240 }}><span className="ellipsis" style={{ display: 'block' }}>{e.desc}</span></td>
+                  <td style={{ maxWidth: tab === 'dup' ? 340 : 240 }}>{tab === 'dup' ? deteccionDe(e) : <span className="ellipsis" style={{ display: 'block' }}>{e.desc}</span>}</td>
                   <td className="nowrap">{e.prov}</td>
                   <td>{e.cat}</td>
                   <td>{e.type}</td>
                   <td style={{ maxWidth: 180 }}><span className="ellipsis" style={{ display: 'block', color: 'var(--color-neutral-800)' }}>{e.proj || '—'}</span></td>
                   <td>{e.pay}</td>
-                  <td className="num nowrap" style={{ textAlign: 'right', fontWeight: 600 }}>{money(e.amt)}</td>
+                  <td className="num nowrap" style={{ textAlign: 'right', fontWeight: 600, textDecoration: e.st === 'desc' ? 'line-through' : undefined }}>{money(e.amt)}</td>
                   <td><span className={STAT[e.st][1]}>{STAT[e.st][0]}</span></td>
                 </tr>
               ))}
@@ -153,13 +193,13 @@ function GastosList() {
       {isMobile && (
         <div className="stack" style={{ gap: 'var(--space-1)' }}>
           {visible.map((e) => (
-            <button key={e.id} className="m-card" onClick={() => open(e.id)}>
+            <button key={e.id} className="m-card" onClick={() => open(e.id)} style={rowStyle(e)}>
               <span className="row" style={{ justifyContent: 'space-between', gap: 'var(--space-2)', width: '100%', alignItems: 'flex-start' }}>
                 <span style={{ fontWeight: 600, fontSize: 15 }}>{e.desc}</span>
                 <span className="num nowrap" style={{ fontWeight: 600 }}>{money(e.amt)}</span>
               </span>
               <span className="muted" style={{ fontSize: 13 }}>{e.prov} · {fd(e.date)} · {e.pay}</span>
-              <span className={STAT[e.st][1]}>{STAT[e.st][0]}</span>
+              {tab === 'dup' ? deteccionDe(e) : <span className={STAT[e.st][1]}>{STAT[e.st][0]}</span>}
             </button>
           ))}
         </div>
