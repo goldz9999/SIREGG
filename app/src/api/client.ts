@@ -26,7 +26,7 @@ export function clearToken() {
 export function setUnauthorizedHandler(fn: (() => void) | null) { onUnauthorized = fn; }
 
 type Query = Record<string, string | number | boolean | undefined>;
-interface Options { method?: 'GET' | 'POST' | 'PATCH' | 'DELETE'; body?: unknown; query?: Query }
+interface Options { method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'; body?: unknown; query?: Query }
 
 async function messageOf(res: Response, fallback: string): Promise<string> {
   try {

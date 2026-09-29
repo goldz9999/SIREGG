@@ -1,6 +1,6 @@
 import { api } from './client';
 import type { PatchBody } from './sync';
-import type { ApiCategoria, ApiConteos, ApiEmpresa, ApiGasto, ApiLogin, ApiPedido, ApiPerfil, ApiProveedor, ApiResumen, ApiUsuario, ApiUsuarioLista, EstadoPedido, Moneda, RolEmpresa } from './types';
+import type { ApiCategoria, ApiConteos, ApiEmpresa, ApiEstadoBot, ApiGasto, ApiLogin, ApiPedido, ApiPerfil, ApiProveedor, ApiResumen, ApiUsuario, ApiUsuarioLista, EstadoPedido, Moneda, RolEmpresa } from './types';
 
 export const login = (email: string, password: string) =>
   api<ApiLogin>('/auth/login', { method: 'POST', body: { email, password } });
@@ -72,3 +72,10 @@ export const subirLogo = (empresaId: number, file: File) => {
   form.append('file', file);
   return api<ApiEmpresa>('/empresas/' + empresaId + '/logo', { method: 'PATCH', body: form, query: { empresa_id: empresaId } });
 };
+
+// Bot de Telegram (solo propietario). empresa_id: el rol se evalúa en la empresa activa.
+export const estadoBot = (empresaId: number) => api<ApiEstadoBot>('/telegram/config', { query: { empresa_id: empresaId } });
+export const conectarBot = (empresaId: number, baseUrl: string) =>
+  api<ApiEstadoBot>('/telegram/config/webhook', { method: 'PUT', body: { base_url: baseUrl }, query: { empresa_id: empresaId } });
+export const desconectarBot = (empresaId: number) =>
+  api<ApiEstadoBot>('/telegram/config/webhook', { method: 'DELETE', query: { empresa_id: empresaId } });

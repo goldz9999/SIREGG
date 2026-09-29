@@ -16,6 +16,7 @@ import Proveedores from './pages/Proveedores';
 import Proyectos from './pages/Proyectos';
 import Reportes from './pages/Reportes';
 import Revision from './pages/Revision';
+import Telegram from './pages/Telegram';
 import Usuarios from './pages/Usuarios';
 import { AppStateProvider, useApp } from './state/AppState';
 import { AuthProvider, useAuth } from './state/Auth';
@@ -49,6 +50,7 @@ function Gate() {
             <Route path="usuarios" element={<Usuarios />} />
             <Route path="empresa" element={<ConfigEmpresa />} />
             <Route path="personal" element={<ConfigPersonal />} />
+            <Route path="telegram" element={<Telegram />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
         </Routes>

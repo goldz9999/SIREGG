@@ -2,7 +2,7 @@ export type Role = 'Propietario' | 'Administrador' | 'Contador' | 'Supervisor' |
 
 export type PageId =
   | 'dashboard' | 'revision' | 'gastos' | 'comprobantes' | 'proveedores' | 'proyectos'
-  | 'categorias' | 'reportes' | 'usuarios' | 'empresa' | 'personal';
+  | 'categorias' | 'reportes' | 'usuarios' | 'empresa' | 'personal' | 'telegram';
 
 export interface Company {
   id: string;

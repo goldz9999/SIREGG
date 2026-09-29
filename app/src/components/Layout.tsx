@@ -1,6 +1,6 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { NAV_GROUPS, PAGES } from '../data/org';
+import { NAV_GROUPS, PAGES, SETTINGS_GROUPS, SETTINGS_PAGES } from '../data/org';
 import type { PageId } from '../data/types';
 import { useMotion } from '../hooks/useMotion';
 import { useViewport } from '../hooks/useViewport';
@@ -39,6 +39,17 @@ export default function Layout() {
   const { rememberPage } = app;
   useEffect(() => { rememberPage(page); }, [page, rememberPage]);
 
+  // En una página de configuración la barra lateral muestra el panel de configuración;
+  // "Volver" regresa a la última página principal y "Configuración" a la última de ajustes.
+  const inSettings = SETTINGS_PAGES.includes(page);
+  const lastMain = useRef<PageId>('dashboard');
+  const lastSettings = useRef<PageId>('personal');
+  if (inSettings) lastSettings.current = page;
+  else lastMain.current = page;
+  // Cambian de panel sin cerrar el cajón en móvil, para que se vea la otra barra.
+  const swapPanel = (id: PageId) => { setOpen(null); navigate('/' + id); };
+  const openSettings = () => swapPanel(allowed.includes(lastSettings.current) ? lastSettings.current : 'personal');
+
   const go = (id: PageId) => { setDrawer(false); setOpen(null); navigate('/' + id); };
   const closeAll = () => { setOpen(null); setDrawer(false); };
   const toggle = (k: Exclude<Popover, null>) => { setOpen((o) => (o === k ? null : k)); setCoQuery(''); };
@@ -72,6 +83,28 @@ export default function Layout() {
     ...(cnt && cnt.sinComprobante ? [{ icon: 'ph-receipt', c: 'a' as const, text: cnt.sinComprobante + (cnt.sinComprobante === 1 ? ' gasto sin comprobante' : ' gastos sin comprobante') }] : []),
   ];
   const scrimOn = !!open || (isMobile && drawer);
+  const navButton = (id: PageId) => {
+    const p = PAGES[id];
+    const badge = id === 'revision' && app.pendingCount ? String(app.pendingCount) : '';
+    return (
+      <button key={id} className={'nav-item' + (id === page ? ' on' : '')} aria-current={id === page ? 'page' : undefined} onClick={() => go(id)}>
+        <Icon n={p.icon} style={{ fontSize: 18 }} />
+        <span className="grow">{p.label}</span>
+        {badge && <span className="tag tag-accent-2" style={{ fontSize: 11 }}>{badge}</span>}
+      </button>
+    );
+  };
+  const navGroups = (groups: { label: string; ids: PageId[] }[]) => groups.map((g) => {
+    const items = g.ids.filter((id) => allowed.includes(id));
+    if (!items.length) return null;
+    return (
+      <div key={g.label} className="stack" style={{ gap: 2 }}>
+        <div className="nav-label">{g.label}</div>
+        {items.map(navButton)}
+      </div>
+    );
+  });
+
 
   return (
     <div className="shell">
@@ -107,28 +140,26 @@ export default function Layout() {
           )}
         </div>
 
-        <nav className="stack" style={{ gap: 'var(--space-4)' }}>
-          {NAV_GROUPS.map((g) => {
-            const items = g.ids.filter((id) => allowed.includes(id));
-            if (!items.length) return null;
-            return (
-              <div key={g.label} className="stack" style={{ gap: 2 }}>
-                <div className="nav-label">{g.label}</div>
-                {items.map((id) => {
-                  const p = PAGES[id];
-                  const badge = id === 'revision' && app.pendingCount ? String(app.pendingCount) : '';
-                  return (
-                    <button key={id} className={'nav-item' + (id === page ? ' on' : '')} aria-current={id === page ? 'page' : undefined} onClick={() => go(id)}>
-                      <Icon n={p.icon} style={{ fontSize: 18 }} />
-                      <span className="grow">{p.label}</span>
-                      {badge && <span className="tag tag-accent-2" style={{ fontSize: 11 }}>{badge}</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            );
-          })}
-        </nav>
+        {inSettings ? (
+          <nav key="settings" className="side-panel" aria-label="Configuración">
+            <div className="stack" style={{ gap: 6 }}>
+              <button className="side-back" onClick={() => swapPanel(lastMain.current)}><Icon n="ph-arrow-left" /> Volver</button>
+              <div style={{ fontSize: 17, fontWeight: 600, letterSpacing: '-.01em', padding: '0 var(--space-2)' }}>Configuración</div>
+            </div>
+            {navGroups(SETTINGS_GROUPS)}
+          </nav>
+        ) : (
+          <>
+            <nav key="main" className="stack" style={{ gap: 'var(--space-4)' }}>{navGroups(NAV_GROUPS)}</nav>
+            <div className="side-foot">
+              <button className="nav-item" style={{ width: '100%' }} onClick={openSettings}>
+                <Icon n="ph-gear-six" style={{ fontSize: 18 }} />
+                <span className="grow">Configuración</span>
+                <Icon n="ph-caret-right" style={{ fontSize: 14, color: 'var(--color-neutral-700)' }} />
+              </button>
+            </div>
+          </>
+        )}
       </aside>
 
       <div className="stack grow minw0">

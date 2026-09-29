@@ -85,6 +85,14 @@ export interface ApiConteos {
   sinComprobante: number;
 }
 
+export interface ApiEstadoBot {
+  token_configurado: boolean;
+  secret_configurado: boolean;
+  bot: { username: string; nombre: string } | null;
+  webhook: { url: string | null; base_url: string | null; pendientes: number; ultimo_error: string | null; ultimo_error_en: string | null } | null;
+  ruta_webhook: string;
+}
+
 export type EstadoPedido = 'activo' | 'finalizado' | 'cancelado';
 
 export interface ApiPedido {
