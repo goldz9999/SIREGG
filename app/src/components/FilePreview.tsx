@@ -20,7 +20,7 @@ export default function FilePreview({ expense: e, index, onClose, onGoToExpense 
         : [];
 
   return (
-    <Dialog onClose={onClose} width={520}>
+    <Dialog onClose={onClose} width={f.url && f.k !== 'Audio' ? 760 : 520}>
       <div className="row" style={{ justifyContent: 'space-between', gap: 'var(--space-2)' }}>
         <div className="row" style={{ gap: 'var(--space-2)' }}><span className={GROUP_CLS[group]}>{group}</span><strong>{f.k}</strong></div>
         <button className="btn btn-ghost btn-icon" aria-label="Cerrar" onClick={onClose}><Icon n="ph-x" /></button>
@@ -35,10 +35,14 @@ export default function FilePreview({ expense: e, index, onClose, onGoToExpense 
           ))}
         </div>
       )}
-      {f.k === 'Foto' && (
+      {f.k !== 'Audio' && (
         f.url
-          ? <img src={f.url} alt="Foto del gasto" style={{ width: '100%', maxHeight: 420, objectFit: 'contain', background: 'var(--color-neutral-200)' }} />
-          : <div className="muted" style={{ padding: 'var(--space-4)', textAlign: 'center' }}>La imagen no está disponible.</div>
+          ? (
+            <a href={f.url} target="_blank" rel="noreferrer" title="Abrir la imagen en tamaño completo">
+              <img src={f.url} alt={f.k + ' de ' + (e.prov || 'el gasto')} style={{ width: '100%', maxHeight: '60vh', objectFit: 'contain', background: 'var(--color-neutral-200)', borderRadius: 'var(--radius-md)', display: 'block' }} />
+            </a>
+          )
+          : f.k === 'Foto' && <div className="muted" style={{ padding: 'var(--space-4)', textAlign: 'center' }}>La imagen no está disponible.</div>
       )}
       {f.k === 'Audio' && (
         f.url

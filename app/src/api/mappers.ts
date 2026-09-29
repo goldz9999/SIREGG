@@ -46,10 +46,14 @@ export function statusOf(g: Pick<ApiGasto, 'pendiente_revision' | 'posible_dupli
 
 function mapEvidence(g: ApiGasto): Evidence[] {
   const ev: Evidence[] = [];
-  for (const c of g.comprobantes ?? []) ev.push({ k: c.tipo === 'boleta' ? 'Boleta' : 'Factura', file: c.numero ?? 'comprobante-' + c.id });
+  // La factura y la constancia de pago no traen archivo propio: su imagen es la foto
+  // que llegó con el gasto. Con dos fotos (factura + Yape), la primera es la factura
+  // y la última el pago; con una sola, esa sirve para ambos.
+  const fotos = (g.evidencias ?? []).filter((e) => e.tipo !== 'audio' && e.url).map((e) => e.url as string);
+  for (const c of g.comprobantes ?? []) ev.push({ k: c.tipo === 'boleta' ? 'Boleta' : 'Factura', file: c.numero ?? 'comprobante-' + c.id, url: fotos[0] ?? null });
   for (const p of g.pagos ?? []) {
     const k = p.medio === 'yape' ? 'Yape' : p.medio === 'transferencia' ? 'Transferencia' : null;
-    if (k) ev.push({ k, file: (p.numero_operacion ?? 'pago') + '-' + p.id });
+    if (k) ev.push({ k, file: (p.numero_operacion ?? 'pago') + '-' + p.id, url: fotos[fotos.length - 1] ?? null });
   }
   for (const e of g.evidencias ?? []) ev.push({ k: e.tipo === 'audio' ? 'Audio' : 'Foto', file: e.storage_path, url: e.url ?? null });
   return ev;

@@ -46,6 +46,8 @@ export default function ExpenseDetail({ expense: e, done, onDone, onResolved, on
   const { co, companies, personal, user, expenses, patchExpense, showToast, categories, pedidos } = useApp();
   const [draft, setDraft] = useState<Draft | null>(null);
   const [preview, setPreview] = useState<number | null>(null);
+  // Vista ampliada de un archivo del gasto original (comparación de duplicados).
+  const [origPreview, setOrigPreview] = useState<number | null>(null);
   const [newProj, setNewProj] = useState(false);
 
   // Categorías de la empresa del gasto (en "Gastos personales" se cargan las de todas).
@@ -104,7 +106,13 @@ export default function ExpenseDetail({ expense: e, done, onDone, onResolved, on
   if (done && e.st === 'ok') banner = ['ph-check-circle', 'Registrado', 'Cambio guardado.', 'var(--color-accent-100)', 'var(--color-accent)'];
 
   const orig = e.dupOf ? expenses.find((x) => x.id === e.dupOf) : undefined;
-  const dupRows = (x: Expense) => [['ID', x.id], ['Fecha', fd(x.date)], ['Proveedor', x.prov], ['Monto', money(x.amt)], ['Medio', x.pay], ['Registró', x.user]];
+  const numeroDe = (x: Expense) => x.ev.filter((f) => f.k === 'Factura' || f.k === 'Boleta').map((f) => f.k + ' ' + f.file).join(', ');
+  const dupRows = (x: Expense) => [
+    ['ID', x.id], ['Fecha', fd(x.date)], ['Proveedor', x.prov || '—'], ['RUC', x.ruc || '—'], ['Comprobante', numeroDe(x) || '—'],
+    ['Monto', money(x.amt)], ['Medio', x.pay || '—'], ['Registró', x.user || '—'],
+  ];
+  // Imágenes para comparar: las fotos del gasto (con su índice en ev para abrir la vista previa).
+  const fotosDe = (x: Expense) => x.ev.map((f, j) => ({ f, j })).filter(({ f }) => f.k === 'Foto' && f.url);
   const [stLabel, stCls] = STAT[e.st];
 
   const fields: [string, string][] = [
@@ -167,10 +175,23 @@ export default function ExpenseDetail({ expense: e, done, onDone, onResolved, on
       {e.st === 'dup' && orig && (
         <div data-a="1" className="panel" style={{ gap: 12 }}>
           <h3 className="panel-title">Comparación con el gasto existente</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 'var(--space-4)', maxWidth: 760 }}>
-            {[{ title: 'Nuevo — ' + e.channel, bg: 'var(--color-accent-2-100)', x: e }, { title: 'Existente — registrado', bg: 'var(--color-surface)', x: orig }].map((c) => (
+          <span className="muted" style={{ fontSize: 13 }}>Compara las imágenes: toca una para verla en grande.</span>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,280px),1fr))', gap: 'var(--space-4)' }}>
+            {[{ title: 'Nuevo — ' + e.channel, bg: 'var(--color-accent-2-100)', x: e, open: setPreview }, { title: 'Existente — registrado', bg: 'var(--color-surface)', x: orig, open: setOrigPreview }].map((c) => (
               <div key={c.title} className="stack" style={{ gap: 6, padding: 'var(--space-3)', background: c.bg, borderRadius: 'var(--radius-md)' }}>
                 <div className="muted" style={{ fontSize: 13 }}>{c.title}</div>
+                {fotosDe(c.x).length > 0 ? (
+                  <div className="stack" style={{ gap: 6, marginBottom: 6 }}>
+                    {fotosDe(c.x).map(({ f, j }) => (
+                      <button key={f.file} onClick={() => c.open(j)} title="Ver en grande"
+                        style={{ border: 0, padding: 0, cursor: 'zoom-in', background: 'var(--color-neutral-200)', borderRadius: 'var(--radius-md)', overflow: 'hidden', display: 'block' }}>
+                        <img src={f.url!} alt={'Imagen del gasto ' + c.x.id} loading="lazy" style={{ width: '100%', height: 320, objectFit: 'contain', display: 'block' }} />
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="muted" style={{ height: 120, display: 'grid', placeItems: 'center', fontSize: 13, background: 'var(--fill)', borderRadius: 'var(--radius-md)', marginBottom: 6 }}>Sin imagen (registrado por texto o audio)</div>
+                )}
                 {dupRows(c.x).map(([l, v]) => (
                   <div key={l} className="row" style={{ justifyContent: 'space-between', gap: 'var(--space-2)', fontSize: 14 }}>
                     <span className="muted">{l}</span><span style={{ fontWeight: 600, textAlign: 'right' }}>{v}</span>
@@ -230,7 +251,9 @@ export default function ExpenseDetail({ expense: e, done, onDone, onResolved, on
               return (
                 <button key={f.file} data-a="1" onClick={() => setPreview(j)} className="list-btn hover-n100"
                   style={{ gap: 'var(--space-3)', padding: 'var(--space-2)', margin: '0 calc(var(--space-2) * -1)', borderRadius: 'var(--radius-md)', minHeight: 48 }}>
-                  <Icon n={icon} style={{ fontSize: 22, color: 'var(--color-accent)' }} />
+                  {f.url && f.k !== 'Audio'
+                    ? <img src={f.url} alt="" loading="lazy" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 8, flex: 'none', background: 'var(--color-neutral-200)' }} />
+                    : <Icon n={icon} style={{ fontSize: 22, color: 'var(--color-accent)' }} />}
                   <span className="stack grow" style={{ lineHeight: 1.3 }}><span style={{ fontSize: 15 }}>{f.k}</span><span className="muted" style={{ fontSize: 12 }}>{f.file}</span></span>
                   <span className={GROUP_CLS[group]}>{group}</span>
                 </button>
@@ -259,6 +282,9 @@ export default function ExpenseDetail({ expense: e, done, onDone, onResolved, on
 
       {preview !== null && (
         <FilePreview expense={e} index={preview} onClose={() => setPreview(null)} />
+      )}
+      {origPreview !== null && orig && (
+        <FilePreview expense={orig} index={origPreview} onClose={() => setOrigPreview(null)} />
       )}
       {newProj && <NewProjectDialog forId={e.id} onClose={() => setNewProj(false)} />}
     </div>

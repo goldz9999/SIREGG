@@ -27,6 +27,16 @@ describe('mapGasto', () => {
     expect(e.ev[2].url).toBe('https://x/a.webp');
   });
 
+  it('la factura y el pago muestran la foto del gasto (factura = primera, pago = última)', () => {
+    const e = mapGasto(gasto({ evidencias: [
+      { id: 1, tipo: 'imagen', origen: 'telegram', storage_path: 'f.webp', url: 'https://x/factura.webp' },
+      { id: 2, tipo: 'imagen', origen: 'telegram', storage_path: 'y.webp', url: 'https://x/yape.webp' },
+    ] }));
+    expect(e.ev.find((x) => x.k === 'Factura')?.url).toBe('https://x/factura.webp');
+    expect(e.ev.find((x) => x.k === 'Yape')?.url).toBe('https://x/yape.webp');
+    expect(mapGasto(gasto({ evidencias: [] })).ev.find((x) => x.k === 'Factura')?.url).toBeNull();
+  });
+
   it('estados: pendiente, duplicado pendiente, duplicado confirmado', () => {
     expect(mapGasto(gasto({ pendiente_revision: true })).st).toBe('pend');
     const dup = mapGasto(gasto({ pendiente_revision: true, posible_duplicado_de: 9 }));
