@@ -39,7 +39,7 @@ export default function Comprobantes() {
         {files.map(({ e, f, j }) => {
           const [g, icon] = KIND[f.k];
           return (
-            <button key={f.file} onClick={() => setPreview({ id: e.id, j })} className="card lift"
+            <button key={e.id + '-' + j} onClick={() => setPreview({ id: e.id, j })} className="card lift"
               style={{ border: 0, gap: 'var(--space-2)', textAlign: 'left', cursor: 'pointer', color: 'inherit', font: 'inherit', padding: 'var(--space-3)' }}>
               <span style={{ height: 96, display: 'grid', placeItems: 'center', background: 'var(--color-bg)', borderRadius: 'var(--radius-md)' }}>
                 <Icon n={icon} style={{ fontSize: 40, color: g === 'Comprobante' ? 'var(--color-accent)' : 'var(--color-neutral-700)' }} />

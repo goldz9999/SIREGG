@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { crearUsuario, listUsuarios } from '../api/endpoints';
+import { actualizarUsuario, crearUsuario, listUsuarios } from '../api/endpoints';
 import { mapMember, toRolEmpresa } from '../api/mappers';
 import { Dialog, Icon, Select } from '../components/ui';
 import { ROLE_DOCS, ROLES } from '../data/org';
+import type { RolEmpresa } from '../api/types';
 import type { Member, Role } from '../data/types';
 import { initials } from '../lib/format';
 import { useViewport } from '../hooks/useViewport';
@@ -11,7 +12,7 @@ import { useApp } from '../state/AppState';
 interface NewMember { name: string; email: string; password: string; role: Role }
 
 export default function Usuarios() {
-  const { co, edits, setEdits, showToast, user } = useApp();
+  const { co, showToast, user } = useApp();
   const { w } = useViewport();
   const [invite, setInvite] = useState<NewMember | null>(null);
   const [busy, setBusy] = useState(false);
@@ -33,11 +34,17 @@ export default function Usuarios() {
   const canManage = isOwner || myRole === 'Administrador';
   // Only an owner can grant or change the owner role.
   const roleChoices = isOwner ? ROLES : ROLES.slice(1);
-  const members: Member[] = apiMembers.map((m) => ({ ...m, ...(edits.members[co.id + '|' + m.email] || {}) }));
-  const setM = (m: Member, p: Partial<Member>) => setEdits((s) => {
-    const k = co.id + '|' + m.email;
-    return { ...s, members: { ...s.members, [k]: { ...(s.members[k] || {}), ...p } } };
-  });
+  const members: Member[] = apiMembers;
+  const update = async (m: Member, body: { rol_empresa?: RolEmpresa; activo?: boolean }, ok: string) => {
+    if (m.id === undefined) return;
+    try {
+      await actualizarUsuario(m.id, Number(co.id), body);
+      setTick((t) => t + 1);
+      showToast(ok, 'ph-check-circle');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'No se pudo guardar el cambio.', 'ph-warning-circle');
+    }
+  };
 
   const narrow = w < 1200;
   const cols = narrow ? '40px minmax(0,1fr)' : '40px minmax(0,1fr) 190px 170px 130px';
@@ -77,9 +84,8 @@ export default function Usuarios() {
           const editable = canManage && !locked;
           const actions: { label: string; color?: string; run: () => void }[] = [];
           if (editable) {
-            if (m.inv !== 'Aceptada') actions.push({ label: 'Reenviar', run: () => { setM(m, { inv: 'Pendiente' }); showToast('Invitación reenviada a ' + m.email + ' (demostración).', 'ph-paper-plane-tilt'); } });
-            else if (m.acc === 'Activa') actions.push({ label: 'Suspender', color: 'var(--color-accent-2-700)', run: () => { setM(m, { acc: 'Suspendida' }); showToast(m.name + ' suspendido en ' + co.short + ' (demostración).', 'ph-prohibit'); } });
-            else actions.push({ label: 'Reactivar', run: () => { setM(m, { acc: 'Activa' }); showToast(m.name + ' reactivado (demostración).', 'ph-check-circle'); } });
+            if (m.acc === 'Activa') actions.push({ label: 'Desactivar cuenta', color: 'var(--color-accent-2-700)', run: () => update(m, { activo: false }, 'Cuenta de ' + m.name + ' desactivada (aplica a todas sus organizaciones).') });
+            else if (m.acc === 'Suspendida') actions.push({ label: 'Reactivar', run: () => update(m, { activo: true }, 'Cuenta de ' + m.name + ' reactivada.') });
           }
           const invCls = m.inv === 'Aceptada' ? 'tag tag-outline' : m.inv === 'Pendiente' ? 'tag tag-accent' : 'tag tag-accent-2';
           const accCls = m.acc === 'Activa' ? 'tag tag-outline' : m.acc === 'Suspendida' ? 'tag tag-accent-2' : 'tag tag-neutral';
@@ -96,7 +102,7 @@ export default function Usuarios() {
               </span>
               {editable ? (
                 <Select label="Rol" value={m.role} options={roleChoices.map((v) => ({ v }))} style={{ gridColumn: cellCol }}
-                  onChange={(v) => { setM(m, { role: v as Role }); showToast('Rol de ' + m.name + ' cambiado a ' + v + ' (demostración).', 'ph-user-switch'); }} />
+                  onChange={(v) => update(m, { rol_empresa: toRolEmpresa(v as Role) }, 'Rol de ' + m.name + ' cambiado a ' + v + '.')} />
               ) : <span style={{ fontSize: 14, gridColumn: cellCol }}>{m.role}</span>}
               <span className="row" style={{ gap: 'var(--space-1)', justifyContent: 'flex-end', gridColumn: cellCol }}>
                 {actions.map((a) => <button key={a.label} className="btn btn-ghost" style={{ color: a.color }} onClick={a.run}>{a.label}</button>)}

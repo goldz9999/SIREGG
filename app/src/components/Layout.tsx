@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { NAV_GROUPS, NOTIFS, PAGES } from '../data/org';
+import { NAV_GROUPS, PAGES } from '../data/org';
 import type { PageId } from '../data/types';
 import { useMotion } from '../hooks/useMotion';
 import { useViewport } from '../hooks/useViewport';
@@ -52,7 +52,13 @@ export default function Layout() {
   const q = coQuery.trim().toLowerCase();
   const coList = app.companies.filter((c) => !q || c.name.toLowerCase().includes(q));
   const coEmpty = coList.length === 0;
-  const notifs = NOTIFS[co.id] || [];
+  // Avisos calculados con los conteos reales de la empresa activa.
+  const cnt = app.counts;
+  const notifs: { icon: string; c: 'a' | 'a2'; text: string }[] = [
+    ...(cnt && cnt.requiereRevision ? [{ icon: 'ph-sparkle', c: 'a' as const, text: cnt.requiereRevision + (cnt.requiereRevision === 1 ? ' gasto pendiente de revisión' : ' gastos pendientes de revisión') }] : []),
+    ...(cnt && cnt.posibleDuplicado ? [{ icon: 'ph-copy', c: 'a2' as const, text: cnt.posibleDuplicado + (cnt.posibleDuplicado === 1 ? ' posible duplicado' : ' posibles duplicados') }] : []),
+    ...(cnt && cnt.sinComprobante ? [{ icon: 'ph-receipt', c: 'a' as const, text: cnt.sinComprobante + (cnt.sinComprobante === 1 ? ' gasto sin comprobante' : ' gastos sin comprobante') }] : []),
+  ];
   const scrimOn = !!open || (isMobile && drawer);
 
   return (
@@ -118,9 +124,6 @@ export default function Layout() {
             );
           })}
         </nav>
-        <div className="muted" style={{ marginTop: 'auto', padding: 'var(--space-2)', fontSize: 12, lineHeight: 1.4 }}>
-          <Icon n="ph-flask" /> Prototipo de demostración. Sin backend: los cambios no se guardan.
-        </div>
       </aside>
 
       <div className="stack grow minw0">
@@ -161,10 +164,10 @@ export default function Layout() {
                 {notifs.map((n, i) => (
                   <div key={i} className="row" style={{ gap: 'var(--space-2)', padding: 'var(--space-2) 0', fontSize: 14, alignItems: 'flex-start' }}>
                     <Icon n={n.icon} style={{ fontSize: 18, color: n.c === 'a2' ? 'var(--color-accent-2)' : 'var(--color-accent)' }} />
-                    <div className="stack" style={{ gap: 2 }}><span>{n.text}</span><span className="muted" style={{ fontSize: 12 }}>{n.time}</span></div>
+                    <div className="stack" style={{ gap: 2 }}><span>{n.text}</span></div>
                   </div>
                 ))}
-                {!notifs.length && <div className="muted" style={{ fontSize: 14 }}>Sin notificaciones en este espacio.</div>}
+                {!notifs.length && <div className="muted" style={{ fontSize: 14 }}>Sin avisos pendientes.</div>}
               </div>
             )}
           </div>

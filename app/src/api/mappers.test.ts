@@ -3,7 +3,7 @@ import { initialsOf, mapCompany, mapGasto, mapMember, mapRole, toRolEmpresa } fr
 import type { ApiGasto, ApiUsuarioLista } from './types';
 
 const gasto = (over: Partial<ApiGasto> = {}): ApiGasto => ({
-  id: 12, usuario_id: 1, usuario_nombre: 'Lucía Ramírez', empresa_id: 1, es_personal: false,
+  id: 12, pedido_id: null, creado_en: '2026-09-28T14:05:00Z', usuario_id: 1, usuario_nombre: 'Lucía Ramírez', empresa_id: 1, es_personal: false,
   descripcion: 'Cemento', monto: '1240.50', fecha: '2026-09-28', confianza: 'alta',
   pendiente_revision: false, posible_duplicado_de: null,
   categorias: { nombre: 'Materiales' }, proveedores: { nombre: 'Sodimac' }, pedidos: null,
@@ -18,7 +18,7 @@ describe('mapGasto', () => {
     const e = mapGasto(gasto());
     expect(e).toMatchObject({
       id: '12', desc: 'Cemento', prov: 'Sodimac', cat: 'Materiales', type: 'Empresarial',
-      amt: 1240.5, st: 'ok', user: 'Lucía Ramírez', pay: 'Yape', op: '998877', dupOf: null, proj: '',
+      amt: 1240.5, st: 'ok', user: 'Lucía Ramírez', pay: 'Yape', op: '998877', dupOf: null, proj: '', conf: 'alta', createdAt: '2026-09-28T14:05:00Z',
     });
     expect(e.date.getFullYear()).toBe(2026);
     expect(e.date.getMonth()).toBe(8);
@@ -91,7 +91,7 @@ describe('mapMember', () => {
   });
 
   it('con contraseña y activo: aceptada y activa, con el rol de la empresa pedida', () => {
-    expect(mapMember(u(), 7, 99)).toEqual({ name: 'Ana Quispe', email: 'ana@x.pe', role: 'Contador', inv: 'Aceptada', acc: 'Activa', me: false });
+    expect(mapMember(u(), 7, 99)).toEqual({ id: 4, name: 'Ana Quispe', email: 'ana@x.pe', role: 'Contador', inv: 'Aceptada', acc: 'Activa', me: false });
   });
   it('sin contraseña: pendiente y sin cuenta', () => {
     expect(mapMember(u({ tiene_password: false }), 7, 99)).toMatchObject({ inv: 'Pendiente', acc: '—' });

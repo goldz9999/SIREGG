@@ -1,6 +1,6 @@
 import { api } from './client';
 import type { PatchBody } from './sync';
-import type { ApiCategoria, ApiConteos, ApiEmpresa, ApiGasto, ApiLogin, ApiResumen, ApiUsuario, ApiUsuarioLista, RolEmpresa } from './types';
+import type { ApiCategoria, ApiConteos, ApiEmpresa, ApiGasto, ApiLogin, ApiPedido, ApiProveedor, ApiResumen, ApiUsuario, ApiUsuarioLista, EstadoPedido, RolEmpresa } from './types';
 
 export const login = (email: string, password: string) =>
   api<ApiLogin>('/auth/login', { method: 'POST', body: { email, password } });
@@ -28,3 +28,26 @@ export interface NuevoUsuario { nombre: string; email: string; password: string;
 export const listUsuarios = (empresaId: number) => api<ApiUsuarioLista[]>('/usuarios', { query: { empresa_id: empresaId } });
 export const crearUsuario = (empresaId: number, u: NuevoUsuario) =>
   api<ApiUsuarioLista>('/usuarios', { method: 'POST', body: { ...u, empresa_ids: [empresaId] }, query: { empresa_id: empresaId } });
+
+// ── Proyectos/pedidos, proveedores, categorías, usuarios y empresa ──
+export interface NuevoPedido { nombre: string; cliente?: string; presupuesto?: number }
+export const listPedidos = (empresaId: number) => api<ApiPedido[]>('/pedidos', { query: { empresa_id: empresaId } });
+export const crearPedido = (empresaId: number, p: NuevoPedido) =>
+  api<ApiPedido>('/pedidos', { method: 'POST', body: p, query: { empresa_id: empresaId } });
+export const actualizarPedido = (id: number, empresaId: number, body: { estado?: EstadoPedido }) =>
+  api<ApiPedido>('/pedidos/' + id, { method: 'PATCH', body, query: { empresa_id: empresaId } });
+
+export const listProveedores = (empresaId: number) => api<ApiProveedor[]>('/proveedores', { query: { empresa_id: empresaId } });
+
+export const crearCategoria = (empresaId: number, nombre: string) =>
+  api<ApiCategoria>('/categorias', { method: 'POST', body: { nombre }, query: { empresa_id: empresaId } });
+export const renombrarCategoria = (id: number, empresaId: number, nombre: string) =>
+  api<ApiCategoria>('/categorias/' + id, { method: 'PATCH', body: { nombre }, query: { empresa_id: empresaId } });
+export const eliminarCategoria = (id: number, empresaId: number) =>
+  api<unknown>('/categorias/' + id, { method: 'DELETE', query: { empresa_id: empresaId } });
+
+export const actualizarUsuario = (id: number, empresaId: number, body: { rol_empresa?: RolEmpresa; activo?: boolean }) =>
+  api<ApiUsuarioLista>('/usuarios/' + id, { method: 'PATCH', body, query: { empresa_id: empresaId } });
+
+export const renombrarEmpresa = (empresaId: number, nombre: string) =>
+  api<ApiEmpresa>('/empresas/' + empresaId, { method: 'PATCH', body: { nombre }, query: { empresa_id: empresaId } });

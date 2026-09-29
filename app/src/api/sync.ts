@@ -1,6 +1,6 @@
 import type { Expense } from '../data/types';
 
-export interface PatchBody { monto?: number; descripcion?: string; es_personal?: boolean; categoria_id?: number }
+export interface PatchBody { monto?: number; descripcion?: string; es_personal?: boolean; categoria_id?: number; pedido_id?: number | null }
 
 export type SyncPlan =
   | { kind: 'none' }
@@ -14,9 +14,14 @@ export type SyncPlan =
  * "Conservar ambos" (dup→ok) = el backend lo llama descartar-duplicado (NO es el mismo pago);
  * "Descartar este gasto" (dup→desc) = confirmar-duplicado (SÍ es el mismo pago, no suma a totales).
  * Si además se corrigieron datos, `body` se guarda DESPUÉS de resolver el duplicado.
- * Proyecto, proveedor, RUC y medio de pago no tienen endpoint: se quedan solo en la UI.
+ * Proveedor, RUC y medio de pago no se editan desde el gasto: no llaman a la API.
  */
-export function planSync(cur: Expense, p: Partial<Expense>, cats: { id: number; nombre: string }[]): SyncPlan {
+export function planSync(
+  cur: Expense,
+  p: Partial<Expense>,
+  cats: { id: number; nombre: string }[],
+  pedidos: { id: number; nombre: string }[],
+): SyncPlan {
   const body: PatchBody = {};
   if (p.amt !== undefined && p.amt !== cur.amt) body.monto = p.amt;
   if (p.desc !== undefined && p.desc !== cur.desc) body.descripcion = p.desc;
@@ -24,6 +29,13 @@ export function planSync(cur: Expense, p: Partial<Expense>, cats: { id: number; 
   if (p.cat !== undefined && p.cat !== cur.cat) {
     const c = cats.find((x) => x.nombre === p.cat);
     if (c) body.categoria_id = c.id;
+  }
+  if (p.proj !== undefined && p.proj !== cur.proj) {
+    if (p.proj === '') body.pedido_id = null;
+    else {
+      const ped = pedidos.find((x) => x.nombre === p.proj);
+      if (ped) body.pedido_id = ped.id;
+    }
   }
   const hasBody = Object.keys(body).length > 0;
 

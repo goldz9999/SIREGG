@@ -27,10 +27,10 @@ El frontend consume la API de `facturas-app/backend` (NestJS + Supabase). Crea `
 VITE_API_URL=http://localhost:3000
 ```
 
-- **Conectado:** login, selector de empresa, Dashboard, Gastos (lista y detalle), Revisión y creación/lista de miembros en Usuarios. Ver `src/api/` (cliente, mappers, planificador de sincronización y endpoints), `src/state/Auth.tsx` y `src/state/AppState.tsx`.
-- **Sigue como demostración:** proveedores, categorías, configuración de empresa, proyectos/pedidos, reportes y notificaciones (`src/data/`), y en Usuarios cambiar rol, suspender y reenviar.
-- Proyecto, proveedor, RUC y medio de pago de un gasto se editan solo en pantalla: el backend aún no tiene endpoint para ellos.
-- El espacio "Gastos personales" está oculto: el backend modela lo personal como un flag por gasto, no como una empresa.
-- Los permisos por rol (`PERMS` en `src/data/org.ts`) solo ocultan navegación; el backend valida el acceso por empresa con el rol de `usuario_empresas.rol`.
+- **Todo viene del backend**, sin datos de demostración: login, empresas, Dashboard, Gastos y detalle, Revisión, Comprobantes (con las imágenes reales), Proveedores, Categorías (crear, renombrar, eliminar), Proyectos y pedidos, Reportes (exporta CSV), Usuarios (crear, cambiar rol, desactivar) y Configuración (renombrar la organización). Ver `src/api/`, `src/state/`.
+- Los avisos de la campana se calculan con los conteos reales (`/gastos/conteos`).
+- Proveedor, RUC y medio de pago de un gasto no se editan desde el panel (el backend no lo permite); RUC, dirección, logotipo y moneda de la organización no existen en el backend y no se muestran.
+- El espacio "Gastos personales" no existe como organización: lo personal es un flag por gasto.
+- Los permisos por rol viven en el backend (`usuario_empresas.rol`): categorías y proveedores → propietario, administrador y contador; proyectos/pedidos → propietario, administrador y supervisor; miembros y nombre de la organización → propietario y administrador.
 - La sesión (token) vive en `localStorage` (`siregg-token`, `siregg-session`); tema, empresa y pantalla en `siregg-ui`.
 - `npm test` corre los tests de `src/api` y `src/data`.

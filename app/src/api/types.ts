@@ -39,6 +39,8 @@ export interface ApiGasto {
   confianza: string | null;
   pendiente_revision: boolean;
   posible_duplicado_de: number | null;
+  pedido_id: number | null;
+  creado_en: string;
   categorias: { nombre: string } | null;
   proveedores: { nombre: string } | null;
   pedidos: { nombre: string } | null;
@@ -67,4 +69,32 @@ export interface ApiConteos {
   posibleDuplicado: number;
   duplicadoConfirmado: number;
   sinComprobante: number;
+}
+
+export type EstadoPedido = 'activo' | 'finalizado' | 'cancelado';
+
+export interface ApiPedido {
+  id: number;
+  empresa_id: number;
+  nombre: string;
+  cliente: string | null;
+  presupuesto: number | string | null;
+  estado: EstadoPedido;
+  celular: string | null;
+  fecha_culminacion: string | null;
+  creado_en: string;
+  cantidad_gastos: number;
+  total_gastado: number;
+}
+
+export interface ApiProveedor {
+  id: number;
+  nombre: string;
+  ruc: string | null;
+  categoria_id_sugerida: number | null;
+  es_personal_sugerido: boolean | null;
+  empresa_id: number;
+  veces_usado: number;
+  ultimo_uso: string | null;
+  categoria_sugerida_nombre: string | null;
 }

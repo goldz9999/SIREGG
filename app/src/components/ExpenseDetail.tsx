@@ -1,16 +1,17 @@
-import { useEffect, useState, type CSSProperties, type MutableRefObject } from 'react';
-import { baseCategories, baseProjects, GROUP_CLS, KIND, PAYS, STAT } from '../data/expenses';
+import { useState, type CSSProperties, type MutableRefObject } from 'react';
+import { GROUP_CLS, KIND, STAT } from '../data/expenses';
 import type { Expense, ExpenseType, Status } from '../data/types';
 import { fd, money, uniq } from '../lib/format';
 import { useApp } from '../state/AppState';
-import { useProjects } from '../state/projects';
 import FilePreview from './FilePreview';
 import NewProjectDialog from './NewProjectDialog';
 import { Icon, Select } from './ui';
 
 const NO_PROJECT = 'Sin proyecto';
 
-interface Draft { desc: string; prov: string; ruc: string; amt: string; cat: string; type: ExpenseType; proj: string; pay: string }
+interface Draft { desc: string; amt: string; cat: string; type: ExpenseType; proj: string }
+
+const CAN_CREATE_PROJECT = ['Propietario', 'Administrador', 'Supervisor'];
 
 interface Action { label: string; icon: string; cls: string; run: () => void; color?: string }
 
@@ -20,9 +21,9 @@ const bannerFor = (e: Expense): Banner | undefined => ({
   proc: ['ph-circle-notch', 'Procesando con IA', 'Extrayendo monto, proveedor y categoría del mensaje recibido.', 'var(--color-neutral-100)', 'var(--color-neutral-700)'],
   pend: ['ph-sparkle', 'Revisa la clasificación sugerida', 'La IA completó los datos. Confirma o corrige solo lo que no coincida.', 'var(--color-accent-100)', 'var(--color-accent)'],
   info: ['ph-warning-circle', 'Requiere información', 'Falta el RUC del proveedor para registrar este gasto empresarial.', 'var(--color-accent-2-100)', 'var(--color-accent-2)'],
-  dup: ['ph-copy', 'Posible duplicado', 'Coincide en proveedor, monto y medio de pago con ' + (e.dupOf || 'otro gasto') + '. Decide si conservar ambos.', 'var(--color-accent-2-100)', 'var(--color-accent-2)'],
+  dup: ['ph-copy', 'Posible duplicado', 'Parece repetir el gasto ' + (e.dupOf || 'registrado antes') + '. Decide si conservar ambos.', 'var(--color-accent-2-100)', 'var(--color-accent-2)'],
   err: ['ph-x-circle', 'Error de procesamiento', 'No se pudo leer el comprobante. Reintenta, pide otra foto por Telegram o completa los datos.', 'var(--color-accent-2-100)', 'var(--color-accent-2)'],
-  desc: ['ph-trash', 'Gasto descartado', 'Marcado como duplicado. No se incluye en totales.', 'var(--color-neutral-100)', 'var(--color-neutral-700)'],
+  desc: ['ph-trash', 'Duplicado confirmado', 'Marcado como duplicado. No se incluye en totales.', 'var(--color-neutral-100)', 'var(--color-neutral-700)'],
 } as Partial<Record<Status, Banner>>)[e.st];
 
 /**
@@ -40,39 +41,23 @@ export default function ExpenseDetail({ expense: e, done, onDone, onResolved, on
   onBack?: () => void;
   primaryRef?: MutableRefObject<(() => void) | null>;
 }) {
-  const { co, expenses, patchExpense, showToast, categories } = useApp();
-  const projects = useProjects();
+  const { co, expenses, patchExpense, showToast, categories, pedidos } = useApp();
   const [draft, setDraft] = useState<Draft | null>(null);
   const [preview, setPreview] = useState<number | null>(null);
   const [newProj, setNewProj] = useState(false);
 
-  // Processing finishes on its own after a moment (the demo's stand-in for the AI pipeline).
-  useEffect(() => {
-    if (e.st !== 'proc') return;
-    const t = setTimeout(() => {
-      patchExpense(e.id, { st: 'pend' });
-      showToast('La IA terminó de procesar ' + e.id + '. Revisa los datos sugeridos.', 'ph-sparkle');
-    }, 2200);
-    return () => clearTimeout(t);
-  }, [e.id, e.st, patchExpense, showToast]);
-
-  const hasProjects = baseProjects(co.id).length > 0;
-  const cats = uniq([...baseCategories(co.id), ...categories.map((c) => c.nombre), e.cat]);
-  const projOpts = [NO_PROJECT, ...projects.list];
+  const cats = uniq([...categories.map((c) => c.nombre), e.cat]);
+  const projOpts = uniq([NO_PROJECT, ...pedidos.map((p) => p.nombre), ...(e.proj ? [e.proj] : [])]);
+  const canCreateProject = CAN_CREATE_PROJECT.includes(co.role);
   const isErr = e.st === 'err';
-  const aiRaw = isErr ? [] : ([['Monto', 98], ['Fecha', 95], ['Proveedor', 92], ['RUC', e.ruc ? 90 : 0], ['Categoría', 81], ['Proyecto', hasProjects ? (e.proj ? 68 : 0) : null]] as [string, number | null][]).filter((a): a is [string, number] => a[1] !== null);
 
-  const startEdit = () => setDraft({ desc: e.desc, prov: e.prov, ruc: e.ruc, amt: String(e.amt), cat: e.cat, type: e.type, proj: e.proj || NO_PROJECT, pay: e.pay });
+  const startEdit = () => setDraft({ desc: e.desc, amt: String(e.amt), cat: e.cat, type: e.type, proj: e.proj || NO_PROJECT });
   const confirm = () => {
     const p: Partial<Expense> = { st: 'ok' };
     if (draft) {
       const a = parseFloat(String(draft.amt).replace(/[^0-9.]/g, ''));
       if (!a) { showToast('Ingresa un monto válido.', 'ph-warning-circle'); return; }
-      if (e.st === 'info' && draft.type === 'Empresarial' && !/^\d{11}$/.test(draft.ruc.trim())) {
-        showToast('Ingresa un RUC de 11 dígitos para un gasto empresarial.', 'ph-warning-circle');
-        return;
-      }
-      Object.assign(p, { desc: draft.desc, prov: draft.prov, ruc: draft.ruc.trim(), amt: a, cat: draft.cat, type: draft.type, proj: draft.proj === NO_PROJECT ? '' : draft.proj, pay: draft.pay });
+      Object.assign(p, { desc: draft.desc, amt: a, cat: draft.cat, type: draft.type, proj: draft.proj === NO_PROJECT ? '' : draft.proj });
     }
     patchExpense(e.id, p);
     setDraft(null);
@@ -108,13 +93,13 @@ export default function ExpenseDetail({ expense: e, done, onDone, onResolved, on
   const dupRows = (x: Expense) => [['ID', x.id], ['Fecha', fd(x.date)], ['Proveedor', x.prov], ['Monto', money(x.amt)], ['Medio', x.pay], ['Registró', x.user]];
   const [stLabel, stCls] = STAT[e.st];
 
-  const fields: [string, string][] = [['Descripción', e.desc], ['Proveedor', e.prov], ['RUC', e.ruc || 'Falta'], ['Fecha', fd(e.date) + ' 2026'], ['Categoría', e.cat], ['Tipo', e.type], ['Proyecto o pedido', e.proj || '—'], ['Medio de pago', e.pay], ['Moneda', 'Soles (PEN)'], ['Registró', e.user]];
+  const fields: [string, string][] = [['Descripción', e.desc || '—'], ['Proveedor', e.prov || '—'], ['Fecha', fd(e.date) + ' ' + e.date.getFullYear()], ['Categoría', e.cat], ['Tipo', e.type], ['Proyecto o pedido', e.proj || '—'], ['Medio de pago', e.pay || '—'], ['Registró', e.user || '—']];
   const set = (k: keyof Draft) => (v: string) => setDraft((d) => (d ? { ...d, [k]: v } : d));
   const textInput = (label: string, k: keyof Draft, span = 1) => (
     <div className="field" key={k} style={{ gridColumn: 'span ' + span }}>
       <label>{label}</label>
       <input className="input" value={draft ? draft[k] : ''} onChange={(ev) => set(k)(ev.target.value)}
-        style={{ boxShadow: e.st === 'info' && k === 'ruc' ? '0 0 0 2px var(--color-accent-2)' : undefined }} />
+        />
     </div>
   );
   const selInput = (label: string, k: keyof Draft, opts: string[], span = 1) => (
@@ -124,10 +109,11 @@ export default function ExpenseDetail({ expense: e, done, onDone, onResolved, on
     </div>
   );
 
+  const when = e.createdAt ? new Date(e.createdAt).toLocaleString('es-PE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : fd(e.date);
   const log = [
-    { t: fd(e.date) + ' 09:14', x: 'Recibido por ' + e.channel + ' de ' + e.user },
-    ...(e.st === 'proc' ? [] : [{ t: fd(e.date) + ' 09:14', x: isErr ? 'La lectura automática falló' : 'Datos extraídos y clasificados por IA' }]),
-    ...(e.st === 'ok' ? [{ t: done ? 'Ahora' : fd(e.date) + ' 11:02', x: 'Registro confirmado' + (done ? ' (demostración)' : '') }] : []),
+    { t: when, x: 'Recibido por ' + e.channel + (e.user ? ' de ' + e.user : '') },
+    ...(isErr ? [] : [{ t: when, x: 'Datos extraídos y clasificados por IA' }]),
+    ...(e.st === 'ok' ? [{ t: '', x: 'Registro confirmado' }] : []),
   ];
 
   return (
@@ -147,7 +133,7 @@ export default function ExpenseDetail({ expense: e, done, onDone, onResolved, on
           <div className="stack" style={{ alignItems: 'flex-end', gap: 4 }}>
             <span className="muted" style={{ fontSize: 12.5 }}>Monto</span>
             <span className="num nowrap" style={{ fontSize: 'clamp(32px,3.6vw,44px)', fontWeight: 600, letterSpacing: '-.035em', lineHeight: 1 }}>{money(e.amt)}</span>
-            <span className="muted" style={{ fontSize: 12.5 }}>Soles · {e.pay}</span>
+            <span className="muted" style={{ fontSize: 12.5 }}>{e.pay || 'Sin medio de pago'}</span>
           </div>
         </div>
         {banner && (
@@ -182,16 +168,16 @@ export default function ExpenseDetail({ expense: e, done, onDone, onResolved, on
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,380px),1fr))', gap: 20, alignItems: 'start' }}>
         <div data-a="1" className="panel" style={{ gap: 14 }}>
           <h3 className="panel-title">Datos del gasto</h3>
-          {!draft && co.id !== 'personal' && (
+          {!draft && e.st === 'ok' && (pedidos.length > 0 || canCreateProject) && (
             <div className="stack" style={{ gap: 8, padding: 14, borderRadius: 12, background: 'var(--fill)', border: '1px solid var(--line)' }}>
               <span className="row" style={{ gap: 8, fontSize: 13, fontWeight: 500 }}><Icon n="ph-folders" style={{ fontSize: 16, color: 'var(--color-accent)' }} />Proyecto o pedido</span>
               <div className="row wrap" style={{ gap: 8 }}>
                 <Select label="Proyecto o pedido" value={e.proj || NO_PROJECT} options={projOpts.map((v) => ({ v }))} style={{ flex: '1 1 200px', minWidth: 0, width: 'auto' }}
                   onChange={(v) => {
                     patchExpense(e.id, { proj: v === NO_PROJECT ? '' : v });
-                    showToast(v === NO_PROJECT ? 'Gasto sin proyecto asignado (demostración).' : 'Asignado a ' + v + ' (demostración).', 'ph-folders');
+                    showToast(v === NO_PROJECT ? 'Gasto sin proyecto asignado.' : 'Asignado a ' + v + '.', 'ph-folders');
                   }} />
-                <button className="btn btn-secondary" onClick={() => setNewProj(true)}><Icon n="ph-plus" /> Nuevo</button>
+                {canCreateProject && <button className="btn btn-secondary" onClick={() => setNewProj(true)}><Icon n="ph-plus" /> Nuevo</button>}
               </div>
               <span className="muted" style={{ fontSize: 12.5 }}>Asigna el gasto para sumarlo al costo del proyecto o pedido.</span>
             </div>
@@ -208,13 +194,10 @@ export default function ExpenseDetail({ expense: e, done, onDone, onResolved, on
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: 'var(--space-3)' }}>
               {textInput('Descripción', 'desc', 2)}
-              {textInput('Proveedor', 'prov')}
-              {textInput('RUC', 'ruc')}
               {textInput('Monto (S/)', 'amt')}
               {selInput('Categoría', 'cat', cats)}
               {selInput('Tipo', 'type', ['Empresarial', 'Personal'])}
-              {selInput('Medio de pago', 'pay', PAYS)}
-              {projects.list.length > 0 && selInput('Proyecto o pedido', 'proj', projOpts, 2)}
+              {pedidos.length > 0 && selInput('Proyecto o pedido', 'proj', projOpts, 2)}
             </div>
           )}
         </div>
@@ -236,23 +219,18 @@ export default function ExpenseDetail({ expense: e, done, onDone, onResolved, on
             {!e.ev.length && <span className="muted" style={{ fontSize: 14 }}>Registrado por mensaje de texto, sin archivos adjuntos.</span>}
           </div>
           <div data-a="1" className="panel">
-            <h3 className="panel-title">Extracción IA</h3>
-            {aiRaw.map(([l, p]) => (
-              <div key={l} style={{ display: 'grid', gridTemplateColumns: '100px minmax(0,1fr) 44px', gap: 'var(--space-2)', alignItems: 'center', fontSize: 14 }}>
-                <span>{l}</span>
-                <div style={{ height: 6, background: 'var(--color-neutral-100)' }}>
-                  <div data-grow="x" style={{ height: '100%', width: p + '%', background: p < 75 ? 'var(--color-accent-2)' : 'var(--color-accent)', transformOrigin: 'left' }} />
-                </div>
-                <span className="num" style={{ textAlign: 'right', color: p < 75 ? 'var(--color-accent-2-700)' : undefined }}>{p ? p + '%' : '—'}</span>
-              </div>
-            ))}
-            <span className="muted" style={{ fontSize: 13 }}>{isErr ? 'No se extrajeron datos del archivo recibido.' : 'Barras en magenta: confianza baja, conviene revisar.'}</span>
+            <h3 className="panel-title">Lectura automática</h3>
+            <div className="row" style={{ justifyContent: 'space-between', gap: 'var(--space-2)', fontSize: 14 }}>
+              <span>Confianza de la IA</span>
+              <span className={e.conf === 'alta' ? 'tag tag-outline' : e.conf ? 'tag tag-accent-2' : 'tag tag-neutral'}>{e.conf ? e.conf[0].toUpperCase() + e.conf.slice(1) : 'Sin dato'}</span>
+            </div>
+            <span className="muted" style={{ fontSize: 13 }}>{e.conf === 'alta' ? 'Los datos se registraron sin necesidad de revisión.' : e.conf ? 'Confianza media o baja: conviene revisar los datos.' : 'Este gasto no trae una medida de confianza.'}</span>
           </div>
           <div data-a="1" className="panel">
             <h3 className="panel-title">Historial</h3>
             {log.map((l, i) => (
               <div key={i} className="row" style={{ gap: 'var(--space-3)', fontSize: 14, alignItems: 'flex-start' }}>
-                <span className="muted" style={{ width: 92, flex: 'none' }}>{l.t}</span><span>{l.x}</span>
+                <span className="muted" style={{ width: 110, flex: 'none' }}>{l.t}</span><span>{l.x}</span>
               </div>
             ))}
           </div>

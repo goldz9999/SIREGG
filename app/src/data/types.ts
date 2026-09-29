@@ -12,7 +12,7 @@ export interface Company {
   role: Role;
   color: string;
   kind: 'Empresa' | 'Personal';
-  /** How many expenses arrive pending review in the demo data. */
+  /** Gastos pendientes de revisión (viene de /gastos/conteos). */
   review: number;
 }
 
@@ -45,9 +45,14 @@ export interface Expense {
   dupOf?: string | null;
   ev: Evidence[];
   op: string;
+  /** Confianza de la lectura automática: alta | media | baja. */
+  conf?: string;
+  /** Momento real de registro (ISO). */
+  createdAt?: string;
 }
 
 export interface Member {
+  id?: number;
   name: string;
   email: string;
   role: Role;

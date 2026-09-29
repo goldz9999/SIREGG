@@ -34,7 +34,7 @@ export default function Gastos() {
 
 function GastosList() {
   const app = useApp();
-  const { co, expenses, pendingCount } = app;
+  const { expenses, pendingCount } = app;
   const navigate = useNavigate();
   const { isMobile } = useViewport();
   const [params, setParams] = useSearchParams();
@@ -102,7 +102,7 @@ function GastosList() {
         ))}
         {hasFilters && <button className="btn btn-ghost" onClick={() => { setQ(''); setF(EMPTY_FILTERS); setPage(0); }}><Icon n="ph-x" /> Limpiar</button>}
       </div>
-      <div className="muted" style={{ fontSize: 13 }}>{rows.length} gastos{co.role === 'Empleado' ? ' registrados por ti' : ''} · demostración</div>
+      <div className="muted" style={{ fontSize: 13 }}>{rows.length} gastos</div>
 
       {!isMobile && rows.length > 0 && (
         <div className="table-wrap">

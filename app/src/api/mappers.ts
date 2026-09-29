@@ -71,6 +71,8 @@ export function mapGasto(g: ApiGasto): Expense {
     dupOf: g.posible_duplicado_de != null ? String(g.posible_duplicado_de) : null,
     ev: mapEvidence(g),
     op: pago?.numero_operacion ?? '',
+    conf: g.confianza ?? undefined,
+    createdAt: g.creado_en,
   };
 }
 
@@ -79,6 +81,7 @@ export function mapMember(u: ApiUsuarioLista, empresaId: number, meId: number): 
   const fallback = 'usuario-' + u.id;
   const rol = u.empresas.find((e) => e.empresa_id === empresaId)?.rol ?? 'empleado';
   return {
+    id: u.id,
     name: u.nombre || fallback,
     email: u.email || fallback,
     role: ROLE[rol],

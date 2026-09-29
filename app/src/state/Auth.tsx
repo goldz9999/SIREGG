@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ApiError, clearToken, getToken, setToken, setUnauthorizedHandler } from '../api/client';
 import * as endpoints from '../api/endpoints';
 import { initialsOf, mapCompany } from '../api/mappers';
@@ -22,6 +22,8 @@ interface AuthState {
   error: string;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  /** Vuelve a pedir las empresas (p. ej. tras renombrar una). */
+  refresh: () => Promise<void>;
 }
 
 const Ctx = createContext<AuthState | null>(null);
@@ -51,6 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [error, setError] = useState('');
+  const apiUser = useRef<ApiUsuario | null>(null);
 
   const reset = useCallback(() => {
     clearToken(); writeCached(null);
@@ -59,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const enter = useCallback(async (u: ApiUsuario) => {
     const list = await loadCompanies(u);
+    apiUser.current = u;
     writeCached(u);
     setUser(toUser(u)); setCompanies(list); setStatus('in');
   }, []);
@@ -94,7 +98,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [enter, reset]);
 
-  const value = useMemo<AuthState>(() => ({ status, user, companies, error, login, logout: reset }), [status, user, companies, error, login, reset]);
+  const refresh = useCallback(async () => {
+    if (apiUser.current) setCompanies(await loadCompanies(apiUser.current));
+  }, []);
+
+  const value = useMemo<AuthState>(() => ({ status, user, companies, error, login, logout: reset, refresh }), [status, user, companies, error, login, reset, refresh]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

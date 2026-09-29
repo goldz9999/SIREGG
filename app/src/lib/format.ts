@@ -20,11 +20,5 @@ export function curve(pts: [number, number][]) {
   return d;
 }
 
-/** Deterministic LCG so demo data is stable between reloads. */
-export function seeded(seed: number) {
-  let s = seed;
-  return () => (s = (s * 9301 + 49297) % 233280) / 233280;
-}
-
 export const initials = (name: string) =>
   name.split(' ').map((w) => w[0]).slice(0, 2).join('');

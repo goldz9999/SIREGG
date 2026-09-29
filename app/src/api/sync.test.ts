@@ -7,32 +7,40 @@ const base: Expense = {
   proj: '', pay: 'Yape', amt: 28.9, st: 'pend', user: 'Lucía', channel: 'Telegram', dupOf: null, ev: [], op: '',
 };
 const cats = [{ id: 1, nombre: 'Transporte' }, { id: 2, nombre: 'Materiales' }];
+const peds = [{ id: 3, nombre: 'Obra Surco' }];
 
 describe('planSync', () => {
   it('duplicado: "Conservar ambos" descarta la marca', () => {
-    expect(planSync({ ...base, st: 'dup' }, { st: 'ok', dupOf: null }, cats)).toEqual({ kind: 'descartarDuplicado' });
+    expect(planSync({ ...base, st: 'dup' }, { st: 'ok', dupOf: null }, cats, peds)).toEqual({ kind: 'descartarDuplicado' });
   });
   it('duplicado: "Descartar este gasto" confirma el duplicado', () => {
-    expect(planSync({ ...base, st: 'dup' }, { st: 'desc' }, cats)).toEqual({ kind: 'confirmarDuplicado' });
+    expect(planSync({ ...base, st: 'dup' }, { st: 'desc' }, cats, peds)).toEqual({ kind: 'confirmarDuplicado' });
   });
   it('duplicado con datos corregidos: primero resuelve el duplicado y luego guarda los cambios', () => {
-    expect(planSync({ ...base, st: 'dup' }, { st: 'ok', amt: 30 }, cats)).toEqual({ kind: 'descartarDuplicado', body: { monto: 30 } });
-    expect(planSync({ ...base, st: 'dup' }, { st: 'desc', desc: 'Otro' }, cats)).toEqual({ kind: 'confirmarDuplicado', body: { descripcion: 'Otro' } });
+    expect(planSync({ ...base, st: 'dup' }, { st: 'ok', amt: 30 }, cats, peds)).toEqual({ kind: 'descartarDuplicado', body: { monto: 30 } });
+    expect(planSync({ ...base, st: 'dup' }, { st: 'desc', desc: 'Otro' }, cats, peds)).toEqual({ kind: 'confirmarDuplicado', body: { descripcion: 'Otro' } });
   });
   it('confirmar sin cambios usa confirmar-confianza', () => {
-    expect(planSync(base, { st: 'ok' }, cats)).toEqual({ kind: 'confirmarConfianza' });
+    expect(planSync(base, { st: 'ok' }, cats, peds)).toEqual({ kind: 'confirmarConfianza' });
   });
   it('confirmar con datos corregidos hace PATCH solo de lo que cambió', () => {
-    expect(planSync(base, { st: 'ok', amt: 30, cat: 'Materiales', type: 'Personal', desc: 'Taxi aeropuerto' }, cats))
+    expect(planSync(base, { st: 'ok', amt: 30, cat: 'Materiales', type: 'Personal', desc: 'Taxi aeropuerto' }, cats, peds))
       .toEqual({ kind: 'patch', body: { monto: 30, descripcion: 'Taxi aeropuerto', es_personal: true, categoria_id: 2 } });
   });
   it('categoría que no existe en el backend se ignora', () => {
-    expect(planSync(base, { st: 'ok', cat: 'Inventada' }, cats)).toEqual({ kind: 'confirmarConfianza' });
+    expect(planSync(base, { st: 'ok', cat: 'Inventada' }, cats, peds)).toEqual({ kind: 'confirmarConfianza' });
   });
   it('editar un gasto ya registrado hace PATCH', () => {
-    expect(planSync({ ...base, st: 'ok' }, { st: 'ok', desc: 'Nuevo texto' }, cats)).toEqual({ kind: 'patch', body: { descripcion: 'Nuevo texto' } });
+    expect(planSync({ ...base, st: 'ok' }, { st: 'ok', desc: 'Nuevo texto' }, cats, peds)).toEqual({ kind: 'patch', body: { descripcion: 'Nuevo texto' } });
   });
-  it('campos que el backend no soporta (proyecto, proveedor, RUC) no llaman a la API', () => {
-    expect(planSync({ ...base, st: 'ok' }, { proj: 'Obra Surco', prov: 'Otro', ruc: '20123456789' }, cats)).toEqual({ kind: 'none' });
+  it('campos que el backend no edita desde el gasto (proveedor, RUC, medio de pago) no llaman a la API', () => {
+    expect(planSync({ ...base, st: 'ok' }, { prov: 'Otro', ruc: '20123456789', pay: 'Efectivo' }, cats, peds)).toEqual({ kind: 'none' });
+  });
+  it('asignar un proyecto envía su pedido_id; quitarlo envía null', () => {
+    expect(planSync({ ...base, st: 'ok' }, { proj: 'Obra Surco' }, cats, peds)).toEqual({ kind: 'patch', body: { pedido_id: 3 } });
+    expect(planSync({ ...base, st: 'ok', proj: 'Obra Surco' }, { proj: '' }, cats, peds)).toEqual({ kind: 'patch', body: { pedido_id: null } });
+  });
+  it('un proyecto que no existe en el backend se ignora', () => {
+    expect(planSync({ ...base, st: 'ok' }, { proj: 'Fantasma' }, cats, peds)).toEqual({ kind: 'none' });
   });
 });

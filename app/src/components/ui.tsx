@@ -92,15 +92,6 @@ export function CountUp({ value }: { value: number }) {
   return <>{money(shown)}</>;
 }
 
-export function DemoSave({ onSave }: { onSave: () => void }) {
-  return (
-    <div className="row wrap" style={{ gap: 'var(--space-2)' }}>
-      <button className="btn btn-primary" onClick={onSave}><Icon n="ph-floppy-disk" /> Guardar cambios</button>
-      <span className="muted" style={{ fontSize: 13 }}>Demostración: no se guarda en ningún servidor.</span>
-    </div>
-  );
-}
-
 export function Pref({ on, label, desc, onToggle }: { on: boolean; label: string; desc: string; onToggle: () => void }) {
   return (
     <label className="pref">
