@@ -1,7 +1,7 @@
 import { useEffect, useState, type CSSProperties, type MutableRefObject } from 'react';
 import { baseCategories, baseProjects, GROUP_CLS, KIND, PAYS, STAT } from '../data/expenses';
 import type { Expense, ExpenseType, Status } from '../data/types';
-import { fd, money } from '../lib/format';
+import { fd, money, uniq } from '../lib/format';
 import { useApp } from '../state/AppState';
 import { useProjects } from '../state/projects';
 import FilePreview from './FilePreview';
@@ -22,7 +22,7 @@ const bannerFor = (e: Expense): Banner | undefined => ({
   info: ['ph-warning-circle', 'Requiere información', 'Falta el RUC del proveedor para registrar este gasto empresarial.', 'var(--color-accent-2-100)', 'var(--color-accent-2)'],
   dup: ['ph-copy', 'Posible duplicado', 'Coincide en proveedor, monto y medio de pago con ' + (e.dupOf || 'otro gasto') + '. Decide si conservar ambos.', 'var(--color-accent-2-100)', 'var(--color-accent-2)'],
   err: ['ph-x-circle', 'Error de procesamiento', 'No se pudo leer el comprobante. Reintenta, pide otra foto por Telegram o completa los datos.', 'var(--color-accent-2-100)', 'var(--color-accent-2)'],
-  desc: ['ph-trash', 'Gasto descartado', 'Marcado como duplicado. No se incluye en totales. (Demostración)', 'var(--color-neutral-100)', 'var(--color-neutral-700)'],
+  desc: ['ph-trash', 'Gasto descartado', 'Marcado como duplicado. No se incluye en totales.', 'var(--color-neutral-100)', 'var(--color-neutral-700)'],
 } as Partial<Record<Status, Banner>>)[e.st];
 
 /**
@@ -40,7 +40,7 @@ export default function ExpenseDetail({ expense: e, done, onDone, onResolved, on
   onBack?: () => void;
   primaryRef?: MutableRefObject<(() => void) | null>;
 }) {
-  const { co, expenses, patchExpense, showToast } = useApp();
+  const { co, expenses, patchExpense, showToast, categories } = useApp();
   const projects = useProjects();
   const [draft, setDraft] = useState<Draft | null>(null);
   const [preview, setPreview] = useState<number | null>(null);
@@ -57,7 +57,7 @@ export default function ExpenseDetail({ expense: e, done, onDone, onResolved, on
   }, [e.id, e.st, patchExpense, showToast]);
 
   const hasProjects = baseProjects(co.id).length > 0;
-  const cats = baseCategories(co.id);
+  const cats = uniq([...baseCategories(co.id), ...categories.map((c) => c.nombre), e.cat]);
   const projOpts = [NO_PROJECT, ...projects.list];
   const isErr = e.st === 'err';
   const aiRaw = isErr ? [] : ([['Monto', 98], ['Fecha', 95], ['Proveedor', 92], ['RUC', e.ruc ? 90 : 0], ['Categoría', 81], ['Proyecto', hasProjects ? (e.proj ? 68 : 0) : null]] as [string, number | null][]).filter((a): a is [string, number] => a[1] !== null);
@@ -78,7 +78,7 @@ export default function ExpenseDetail({ expense: e, done, onDone, onResolved, on
     setDraft(null);
     onDone();
     onResolved();
-    showToast(e.id + ' registrado (solo en esta demostración).', 'ph-check-circle');
+    showToast('Gasto ' + e.id + ' registrado.', 'ph-check-circle');
   };
 
   const act = (label: string, icon: string, cls: string, run: () => void, color?: string): Action => ({ label, icon, cls, run, color });
@@ -89,11 +89,11 @@ export default function ExpenseDetail({ expense: e, done, onDone, onResolved, on
   else if (e.st === 'dup') actions = [
     act('Conservar ambos', 'ph-copy', 'btn btn-primary', () => {
       patchExpense(e.id, { st: 'ok', dupOf: null }); onDone(); onResolved();
-      showToast('Se conservaron ambos gastos (demostración).', 'ph-check-circle');
+      showToast('Se conservaron ambos gastos.', 'ph-check-circle');
     }),
     act('Descartar este gasto', 'ph-trash', 'btn btn-secondary', () => {
       patchExpense(e.id, { st: 'desc' }); onResolved();
-      showToast(e.id + ' descartado como duplicado (demostración).', 'ph-trash');
+      showToast('Gasto ' + e.id + ' marcado como duplicado.', 'ph-trash');
     }, 'var(--color-accent-2-700)'),
   ];
   else if (isErr) actions = [act('Reintentar lectura', 'ph-arrow-clockwise', 'btn btn-primary', () => patchExpense(e.id, { st: 'proc' })), act('Completar manualmente', 'ph-pencil-simple', 'btn btn-secondary', startEdit)];
@@ -102,7 +102,7 @@ export default function ExpenseDetail({ expense: e, done, onDone, onResolved, on
   if (primaryRef) primaryRef.current = actions.length ? actions[0].run : null;
 
   let banner = bannerFor(e);
-  if (done && e.st === 'ok') banner = ['ph-check-circle', 'Registrado', 'Cambio aplicado solo en esta demostración. No se guardó en ningún servidor.', 'var(--color-accent-100)', 'var(--color-accent)'];
+  if (done && e.st === 'ok') banner = ['ph-check-circle', 'Registrado', 'Cambio guardado.', 'var(--color-accent-100)', 'var(--color-accent)'];
 
   const orig = e.dupOf ? expenses.find((x) => x.id === e.dupOf) : undefined;
   const dupRows = (x: Expense) => [['ID', x.id], ['Fecha', fd(x.date)], ['Proveedor', x.prov], ['Monto', money(x.amt)], ['Medio', x.pay], ['Registró', x.user]];

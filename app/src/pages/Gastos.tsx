@@ -3,9 +3,9 @@ import { useMatch, useNavigate, useSearchParams } from 'react-router-dom';
 import ExpenseDetail from '../components/ExpenseDetail';
 import { showRegisterInfo } from '../components/Layout';
 import { Icon, SearchInput, Seg, Select } from '../components/ui';
-import { ALERT_STATUSES, baseCategories, isPending, PAYS, STAT } from '../data/expenses';
+import { ALERT_STATUSES, isPending, PAYS, STAT } from '../data/expenses';
 import type { Expense, Status } from '../data/types';
-import { fd, money } from '../lib/format';
+import { fd, money, uniq } from '../lib/format';
 import { useViewport } from '../hooks/useViewport';
 import { useApp } from '../state/AppState';
 
@@ -61,7 +61,7 @@ function GastosList() {
       (!f.st || e.st === f.st) && (!f.cat || e.cat === f.cat) && (!f.type || e.type === f.type) && (!f.pay || e.pay === f.pay));
     const { k, dir } = sort;
     return r.slice().sort((a, b) => {
-      const x = k === 'amt' ? a.amt - b.amt : k === 'prov' ? a.prov.localeCompare(b.prov) : +a.date - +b.date || b.id.localeCompare(a.id);
+      const x = k === 'amt' ? a.amt - b.amt : k === 'prov' ? a.prov.localeCompare(b.prov) : +a.date - +b.date || +b.id - +a.id;
       return x * dir;
     });
   }, [expenses, q, f, tab, sort]);
@@ -76,7 +76,7 @@ function GastosList() {
 
   const filters = [
     { label: 'Estado', value: f.st, set: setFilter('st'), all: 'Todos los estados', opts: (Object.keys(STAT) as Status[]).map((v) => ({ v, l: STAT[v][0] })) },
-    { label: 'Categoría', value: f.cat, set: setFilter('cat'), all: 'Todas las categorías', opts: baseCategories(co.id).map((v) => ({ v })) },
+    { label: 'Categoría', value: f.cat, set: setFilter('cat'), all: 'Todas las categorías', opts: uniq(expenses.map((e) => e.cat)).sort().map((v) => ({ v })) },
     { label: 'Tipo', value: f.type, set: setFilter('type'), all: 'Personal y empresarial', opts: [{ v: 'Empresarial' }, { v: 'Personal' }] },
     { label: 'Medio de pago', value: f.pay, set: setFilter('pay'), all: 'Todos los medios', opts: PAYS.map((v) => ({ v })) },
   ];

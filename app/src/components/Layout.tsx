@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { COMPANIES, CURRENT_USER, NAV_GROUPS, NOTIFS, PAGES, PERSONAL } from '../data/org';
+import { NAV_GROUPS, NOTIFS, PAGES } from '../data/org';
 import type { PageId } from '../data/types';
 import { useMotion } from '../hooks/useMotion';
 import { useViewport } from '../hooks/useViewport';
@@ -50,8 +50,8 @@ export default function Layout() {
   };
 
   const q = coQuery.trim().toLowerCase();
-  const coList = COMPANIES.filter((c) => !q || c.name.toLowerCase().includes(q));
-  const coEmpty = coList.length === 0 && !'gastos personales'.includes(q);
+  const coList = app.companies.filter((c) => !q || c.name.toLowerCase().includes(q));
+  const coEmpty = coList.length === 0;
   const notifs = NOTIFS[co.id] || [];
   const scrimOn = !!open || (isMobile && drawer);
 
@@ -92,12 +92,6 @@ export default function Layout() {
                 </button>
               ))}
               {coEmpty && <div className="muted" style={{ padding: 'var(--space-2)', fontSize: 14 }}>Sin coincidencias.</div>}
-              <div style={{ height: 'var(--space-2)' }} />
-              <button role="option" aria-selected={co.id === PERSONAL.id} className={'co-opt' + (co.id === PERSONAL.id ? ' on' : '')} onClick={() => switchTo(PERSONAL.id)}>
-                <span className="avatar" style={{ width: 28, height: 28, background: 'var(--color-neutral-300)', color: 'inherit' }}><Icon n="ph-user" /></span>
-                <span className="grow" style={{ fontSize: 14, fontWeight: 600 }}>Gastos personales</span>
-                {co.id === PERSONAL.id && <Icon n="ph-check" style={{ color: 'var(--color-accent)', fontSize: 18 }} />}
-              </button>
             </div>
           )}
         </div>
@@ -181,16 +175,16 @@ export default function Layout() {
           )}
 
           <div style={{ position: 'relative' }}>
-            <button className="me-avatar" aria-label="Perfil" onClick={() => toggle('profile')}>{CURRENT_USER.initials}</button>
+            <button className="me-avatar" aria-label="Perfil" onClick={() => toggle('profile')}>{app.user.initials}</button>
             {open === 'profile' && (
               <div data-pop="1" className="pop" style={{ right: 0, top: 'calc(100% + 6px)', width: 260, padding: 'var(--space-3)', gap: 'var(--space-2)' }}>
-                <div className="stack" style={{ lineHeight: 1.3 }}><strong>{CURRENT_USER.name}</strong><span className="muted" style={{ fontSize: 13 }}>{CURRENT_USER.email}</span></div>
+                <div className="stack" style={{ lineHeight: 1.3 }}><strong>{app.user.name}</strong><span className="muted" style={{ fontSize: 13 }}>{app.user.email}</span></div>
                 <div className="nav-label" style={{ padding: 0, marginTop: 'var(--space-2)' }}>Tema</div>
                 <Seg name="theme-p" value={theme} onChange={setTheme} style={{ width: '100%' }} optStyle={{ flex: 1, justifyContent: 'center' }}
                   options={THEME_OPTS.map((o) => ({ value: o.value, label: o.label }))} />
                 <button className="btn btn-ghost" onClick={() => go('personal')} style={{ justifyContent: 'flex-start', marginTop: 'var(--space-2)' }}><Icon n="ph-gear" /> Configuración personal</button>
                 <button className="btn btn-ghost" style={{ justifyContent: 'flex-start' }}
-                  onClick={() => { setOpen(null); app.showToast('Cierre de sesión simulado: no hay backend conectado', 'ph-sign-out'); }}>
+                  onClick={() => { setOpen(null); app.logout(); }}>
                   <Icon n="ph-sign-out" /> Cerrar sesión
                 </button>
               </div>
@@ -220,7 +214,7 @@ function PageHeader({ page }: { page: PageId }) {
   const navigate = useNavigate();
   const app = useApp();
   const isDash = page === 'dashboard' && !loading;
-  const scope = co.role === 'Empleado' ? 'Mostrando solo tus gastos' : co.kind === 'Personal' ? 'Espacio personal, separado de las empresas' : 'Todos los gastos de la organización';
+  const scope = co.role === 'Empleado' ? 'Mostrando solo tus gastos' : 'Todos los gastos de la organización';
   let actions: ReactNode = null;
   if (isDash) {
     const goReports = () => app.allowed.includes('reportes') ? navigate('/reportes') : app.showToast('Tu rol no tiene acceso a Reportes en ' + co.short, 'ph-lock');
@@ -236,7 +230,7 @@ function PageHeader({ page }: { page: PageId }) {
     <div className="row wrap" style={{ alignItems: 'flex-end', justifyContent: 'space-between', gap: 16 }}>
       <div className="stack minw0" style={{ gap: 6 }}>
         <div className="row wrap muted" style={{ gap: 10, fontSize: 13 }}>
-          <span>{co.name} · Setiembre 2026</span>
+          <span>{co.name} · <span style={{ textTransform: 'capitalize' }}>{new Date().toLocaleDateString('es-PE', { month: 'long', year: 'numeric' })}</span></span>
           {isDash && (
             <span className="row" style={{ gap: 6 }}>
               <span className="dot" style={{ width: 6, height: 6, background: 'var(--color-accent)', boxShadow: '0 0 10px var(--color-accent)' }} />{scope}
@@ -251,7 +245,7 @@ function PageHeader({ page }: { page: PageId }) {
 }
 
 export const showRegisterInfo = (toast: (t: string, i?: string) => void) =>
-  toast('Los gastos se registran enviando foto, audio o texto por Telegram. Demostración: no se crea ningún registro.', 'ph-telegram-logo');
+  toast('Los gastos se registran enviando foto, audio o texto por Telegram.', 'ph-telegram-logo');
 
 function LoadingState({ name }: { name: string }) {
   return (
