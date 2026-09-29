@@ -34,6 +34,8 @@ const accion = (id: number, empresaId: number, ruta: string) =>
   api<unknown>('/gastos/' + id + '/' + ruta, { method: 'PATCH', query: { empresa_id: empresaId } });
 export const patchGasto = (id: number, empresaId: number, body: PatchBody) =>
   api<unknown>('/gastos/' + id, { method: 'PATCH', body, query: { empresa_id: empresaId } });
+/** Gasto completo (comprobantes, pagos y evidencias con su hora y URL firmada). */
+export const getGasto = (id: number, empresaId: number) => api<ApiGasto>('/gastos/' + id, { query: { empresa_id: empresaId } });
 export const confirmarConfianza = (id: number, empresaId: number) => accion(id, empresaId, 'confirmar-confianza');
 export const confirmarDuplicado = (id: number, empresaId: number) => accion(id, empresaId, 'confirmar-duplicado');
 export const descartarDuplicado = (id: number, empresaId: number) => accion(id, empresaId, 'descartar-duplicado');

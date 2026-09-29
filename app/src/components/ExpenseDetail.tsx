@@ -1,4 +1,7 @@
-import { useState, type CSSProperties, type MutableRefObject } from 'react';
+import { useEffect, useState, type CSSProperties, type MutableRefObject } from 'react';
+import { getGasto } from '../api/endpoints';
+import { mapGasto } from '../api/mappers';
+import type { Evidence } from '../data/types';
 import { GROUP_CLS, KIND, PAYS, STAT } from '../data/expenses';
 import type { Expense, ExpenseType, Status } from '../data/types';
 import { currencySymbol, fd, money, uniq } from '../lib/format';
@@ -33,7 +36,7 @@ const bannerFor = (e: Expense): Banner | undefined => ({
  * (confirm, correct, complete the RUC, resolve a duplicate, retry a failed read).
  * Mount it with `key={expense.id}` so edit state resets between expenses.
  */
-export default function ExpenseDetail({ expense: e, done, onDone, onResolved, onBack, primaryRef }: {
+export default function ExpenseDetail({ expense: base, done, onDone, onResolved, onBack, primaryRef }: {
   expense: Expense;
   /** True right after this expense was confirmed in the current view. */
   done: boolean;
@@ -44,6 +47,19 @@ export default function ExpenseDetail({ expense: e, done, onDone, onResolved, on
   primaryRef?: MutableRefObject<(() => void) | null>;
 }) {
   const { co, companies, personal, user, expenses, patchExpense, showToast, categories, pedidos } = useApp();
+  // Los archivos se piden con el gasto completo: trae la hora de cada comprobante y pago,
+  // con la que se sabe qué foto es de la factura y cuál del pago.
+  const [evFull, setEvFull] = useState<Evidence[] | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const empresaId = base.empresaId ?? Number(co.id);
+    if (!Number.isInteger(empresaId)) return;
+    getGasto(Number(base.id), empresaId)
+      .then((g) => { if (alive) setEvFull(mapGasto(g).ev); })
+      .catch(() => { /* se queda con los archivos de la lista */ });
+    return () => { alive = false; };
+  }, [base.id, base.empresaId, co.id, base.ev.length]);
+  const e: Expense = evFull ? { ...base, ev: evFull } : base;
   const [draft, setDraft] = useState<Draft | null>(null);
   const [preview, setPreview] = useState<number | null>(null);
   // Vista ampliada de un archivo del gasto original (comparación de duplicados).
