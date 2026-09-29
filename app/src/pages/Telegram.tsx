@@ -17,7 +17,7 @@ export default function Telegram() {
   // autorizadas, del propietario o de quien él autorice.
   return (
     <div className="stack" style={{ gap: 20, maxWidth: 820 }}>
-      {user.canTelegram && <CuentasTelegram key={co.id} />}
+      {(user.canTelegram || co.role === 'Propietario') && <CuentasTelegram key={co.id} />}
       {co.role === 'Propietario' && <ConexionBot />}
     </div>
   );
