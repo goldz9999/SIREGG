@@ -28,7 +28,8 @@ export const PERMS: Record<Role, PageId[]> = {
   Contador: ['dashboard', 'revision', 'gastos', 'comprobantes', 'proveedores', 'proyectos', 'categorias', 'reportes', 'personal'],
   Supervisor: ['dashboard', 'revision', 'gastos', 'comprobantes', 'proveedores', 'proyectos', 'reportes', 'personal'],
   Empleado: ['dashboard', 'revision', 'gastos', 'comprobantes', 'proyectos', 'personal'],
-  Titular: ['dashboard', 'revision', 'gastos', 'comprobantes', 'proveedores', 'categorias', 'reportes', 'personal'],
+  // Espacio "Gastos personales": proveedores, categorías y proyectos son catálogos de cada empresa.
+  Titular: ['dashboard', 'revision', 'gastos', 'comprobantes', 'reportes', 'personal'],
 };
 
 export const ROLES: Role[] = ['Propietario', 'Administrador', 'Supervisor', 'Contador', 'Empleado'];

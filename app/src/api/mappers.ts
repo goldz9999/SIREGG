@@ -21,8 +21,16 @@ export function mapCompany(e: ApiEmpresa, rol: RolEmpresa): Company {
   return {
     id: String(e.id), name: e.nombre, short, initials: initialsOf(short), role: ROLE[rol],
     color: PALETTE[e.id % PALETTE.length], kind: 'Empresa', review: 0,
+    ruc: e.ruc ?? '', address: e.direccion ?? '', currency: e.moneda ?? 'PEN', logoUrl: e.logo_url ?? null,
   };
 }
+
+/** Id del espacio "Gastos personales": no es una empresa, es un filtro sobre los gastos marcados como personales. */
+export const PERSONAL_ID = 'personal';
+export const PERSONAL: Company = {
+  id: PERSONAL_ID, name: 'Gastos personales', short: 'Personal', initials: 'GP', role: 'Titular',
+  color: '#5c5856', kind: 'Personal', review: 0, ruc: '', address: '', currency: 'PEN', logoUrl: null,
+};
 
 const PAY: Record<string, string> = { yape: 'Yape', transferencia: 'Transferencia', efectivo: 'Efectivo', tarjeta: 'Tarjeta', otro: 'Otro' };
 
@@ -59,7 +67,7 @@ export function mapGasto(g: ApiGasto): Expense {
     date: parseDate(g.fecha),
     desc: g.descripcion ?? '',
     prov: g.proveedores?.nombre ?? '',
-    ruc: '',
+    ruc: g.proveedores?.ruc ?? '',
     cat: g.categorias?.nombre ?? 'Sin categoría',
     type: g.es_personal ? 'Personal' : 'Empresarial',
     proj: g.pedidos?.nombre ?? '',
@@ -73,6 +81,7 @@ export function mapGasto(g: ApiGasto): Expense {
     op: pago?.numero_operacion ?? '',
     conf: g.confianza ?? undefined,
     createdAt: g.creado_en,
+    empresaId: g.empresa_id,
   };
 }
 

@@ -21,16 +21,37 @@ npm run build      # typecheck + build de producción en dist/
 
 ## Backend
 
+### Puesta en marcha con Supabase `SIREGG`
+
+La base del proyecto Supabase **SIREGG** (`bqcfsgdlhzjstzbfbner`) ya tiene aplicadas
+`0001_esquema_base.sql`, `0002_rol_por_empresa.sql` y `0003_datos_organizacion.sql` de
+`facturas-app/backend/supabase/migrations/`, el bucket privado `Facturas` y el público `logos-empresas`.
+
+1. En `facturas-app/backend/.env` (copia de `.env.example`):
+   ```
+   SUPABASE_URL=https://bqcfsgdlhzjstzbfbner.supabase.co
+   SUPABASE_KEY=<service_role key de SIREGG: Project Settings → API Keys>
+   JWT_SECRET=<openssl rand -hex 48>
+   ```
+   Debe ser la **service_role** key: las tablas tienen RLS sin políticas y la anon key no ve nada.
+2. `cd facturas-app/backend && npm install && npm run start:dev` (puerto 3000).
+3. `cd SIREGG/app && echo VITE_API_URL=http://localhost:3000 > .env && npm install && npm run dev`.
+4. Entra con un usuario de `public.usuarios` que tenga `password_hash` y filas en
+   `usuario_empresas` (para una base vacía, `supabase/seed-inicial.sql` crea el primero).
+
+
 El frontend consume la API de `facturas-app/backend` (NestJS + Supabase). Crea `app/.env` con la URL del backend (por defecto `http://localhost:3000`):
 
 ```
 VITE_API_URL=http://localhost:3000
 ```
 
-- **Todo viene del backend**, sin datos de demostración: login, empresas, Dashboard, Gastos y detalle, Revisión, Comprobantes (con las imágenes reales), Proveedores, Categorías (crear, renombrar, eliminar), Proyectos y pedidos, Reportes (exporta CSV), Usuarios (crear, cambiar rol, desactivar) y Configuración (renombrar la organización). Ver `src/api/`, `src/state/`.
+- **Todo viene del backend**, sin datos de demostración: login, empresas, Dashboard, Gastos y detalle, Revisión, Comprobantes (con las imágenes reales), Proveedores, Categorías (crear, renombrar, eliminar), Proyectos y pedidos, Reportes (exporta CSV), Usuarios (crear, cambiar rol, desactivar) y Configuración (nombre, RUC, dirección, moneda y logotipo de la organización). Ver `src/api/`, `src/state/`.
 - Los avisos de la campana se calculan con los conteos reales (`/gastos/conteos`).
-- Proveedor, RUC y medio de pago de un gasto no se editan desde el panel (el backend no lo permite); RUC, dirección, logotipo y moneda de la organización no existen en el backend y no se muestran.
-- El espacio "Gastos personales" no existe como organización: lo personal es un flag por gasto.
+- Desde el detalle de un gasto se corrigen proveedor, RUC y medio de pago. El proveedor se busca por nombre en la empresa del gasto (o se crea); el RUC es del proveedor, así que corregirlo vale para todos sus gastos, y no se acepta un RUC que ya tiene otro proveedor. El medio de pago corrige el primer pago del gasto o crea uno.
+- La moneda de la organización (soles o dólares) cambia el símbolo con que se muestran los montos.
+- **Gastos personales** aparece en el selector, debajo de las organizaciones. No es una empresa: muestra tus gastos marcados como personales en todas tus organizaciones (`?ambito=personal`). Cada acción se guarda en la empresa del gasto. Proveedores, categorías y proyectos no aparecen en este espacio porque cada empresa tiene los suyos.
+- Un **propietario** (en al menos una organización) ve todas las organizaciones activas y puede cambiar a cualquiera; en las que no es miembro entra como propietario.
 - Los permisos por rol viven en el backend (`usuario_empresas.rol`): categorías y proveedores → propietario, administrador y contador; proyectos/pedidos → propietario, administrador y supervisor; miembros y nombre de la organización → propietario y administrador.
 - La sesión (token) vive en `localStorage` (`siregg-token`, `siregg-session`); tema, empresa y pantalla en `siregg-ui`.
 - `npm test` corre los tests de `src/api` y `src/data`.

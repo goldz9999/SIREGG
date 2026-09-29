@@ -1,7 +1,7 @@
 import { useState, type CSSProperties, type MutableRefObject } from 'react';
-import { GROUP_CLS, KIND, STAT } from '../data/expenses';
+import { GROUP_CLS, KIND, PAYS, STAT } from '../data/expenses';
 import type { Expense, ExpenseType, Status } from '../data/types';
-import { fd, money, uniq } from '../lib/format';
+import { currencySymbol, fd, money, uniq } from '../lib/format';
 import { useApp } from '../state/AppState';
 import FilePreview from './FilePreview';
 import NewProjectDialog from './NewProjectDialog';
@@ -9,7 +9,9 @@ import { Icon, Select } from './ui';
 
 const NO_PROJECT = 'Sin proyecto';
 
-interface Draft { desc: string; amt: string; cat: string; type: ExpenseType; proj: string }
+interface Draft { desc: string; amt: string; cat: string; type: ExpenseType; proj: string; prov: string; ruc: string; pay: string }
+
+const NO_PAY = 'Sin medio de pago';
 
 const CAN_CREATE_PROJECT = ['Propietario', 'Administrador', 'Supervisor'];
 
@@ -41,23 +43,32 @@ export default function ExpenseDetail({ expense: e, done, onDone, onResolved, on
   onBack?: () => void;
   primaryRef?: MutableRefObject<(() => void) | null>;
 }) {
-  const { co, expenses, patchExpense, showToast, categories, pedidos } = useApp();
+  const { co, companies, personal, expenses, patchExpense, showToast, categories, pedidos } = useApp();
   const [draft, setDraft] = useState<Draft | null>(null);
   const [preview, setPreview] = useState<number | null>(null);
   const [newProj, setNewProj] = useState(false);
 
-  const cats = uniq([...categories.map((c) => c.nombre), e.cat]);
+  // Categorías de la empresa del gasto (en "Gastos personales" se cargan las de todas).
+  const cats = uniq([...categories.filter((c) => e.empresaId == null || c.empresa_id === e.empresaId).map((c) => c.nombre), e.cat]);
+  const payOpts = uniq([...(e.pay ? [] : [NO_PAY]), ...PAYS, ...(e.pay ? [e.pay] : [])]);
+  const orgName = personal && e.empresaId != null ? companies.find((c) => c.id === String(e.empresaId))?.name : undefined;
   const projOpts = uniq([NO_PROJECT, ...pedidos.map((p) => p.nombre), ...(e.proj ? [e.proj] : [])]);
   const canCreateProject = CAN_CREATE_PROJECT.includes(co.role);
   const isErr = e.st === 'err';
 
-  const startEdit = () => setDraft({ desc: e.desc, amt: String(e.amt), cat: e.cat, type: e.type, proj: e.proj || NO_PROJECT });
+  const startEdit = () => setDraft({ desc: e.desc, amt: String(e.amt), cat: e.cat, type: e.type, proj: e.proj || NO_PROJECT, prov: e.prov, ruc: e.ruc, pay: e.pay || NO_PAY });
   const confirm = () => {
     const p: Partial<Expense> = { st: 'ok' };
     if (draft) {
       const a = parseFloat(String(draft.amt).replace(/[^0-9.]/g, ''));
       if (!a) { showToast('Ingresa un monto válido.', 'ph-warning-circle'); return; }
-      Object.assign(p, { desc: draft.desc, amt: a, cat: draft.cat, type: draft.type, proj: draft.proj === NO_PROJECT ? '' : draft.proj });
+      const ruc = draft.ruc.trim();
+      if (ruc && !/^[0-9]{11}$/.test(ruc)) { showToast('El RUC debe tener 11 dígitos.', 'ph-warning-circle'); return; }
+      if (ruc && !draft.prov.trim()) { showToast('Indica el proveedor al que pertenece el RUC.', 'ph-warning-circle'); return; }
+      Object.assign(p, {
+        desc: draft.desc, amt: a, cat: draft.cat, type: draft.type, proj: draft.proj === NO_PROJECT ? '' : draft.proj,
+        prov: draft.prov.trim(), ruc, ...(draft.pay !== NO_PAY ? { pay: draft.pay } : {}),
+      });
     }
     patchExpense(e.id, p);
     setDraft(null);
@@ -93,13 +104,16 @@ export default function ExpenseDetail({ expense: e, done, onDone, onResolved, on
   const dupRows = (x: Expense) => [['ID', x.id], ['Fecha', fd(x.date)], ['Proveedor', x.prov], ['Monto', money(x.amt)], ['Medio', x.pay], ['Registró', x.user]];
   const [stLabel, stCls] = STAT[e.st];
 
-  const fields: [string, string][] = [['Descripción', e.desc || '—'], ['Proveedor', e.prov || '—'], ['Fecha', fd(e.date) + ' ' + e.date.getFullYear()], ['Categoría', e.cat], ['Tipo', e.type], ['Proyecto o pedido', e.proj || '—'], ['Medio de pago', e.pay || '—'], ['Registró', e.user || '—']];
+  const fields: [string, string][] = [
+    ['Descripción', e.desc || '—'], ['Proveedor', e.prov || '—'], ['RUC', e.ruc || '—'], ['Fecha', fd(e.date) + ' ' + e.date.getFullYear()],
+    ['Categoría', e.cat], ['Tipo', e.type], ['Proyecto o pedido', e.proj || '—'], ['Medio de pago', e.pay || '—'], ['Registró', e.user || '—'],
+    ...(orgName ? [['Organización', orgName] as [string, string]] : []),
+  ];
   const set = (k: keyof Draft) => (v: string) => setDraft((d) => (d ? { ...d, [k]: v } : d));
-  const textInput = (label: string, k: keyof Draft, span = 1) => (
+  const textInput = (label: string, k: keyof Draft, span = 1, extra: { inputMode?: 'numeric' | 'decimal'; maxLength?: number; placeholder?: string } = {}) => (
     <div className="field" key={k} style={{ gridColumn: 'span ' + span }}>
       <label>{label}</label>
-      <input className="input" value={draft ? draft[k] : ''} onChange={(ev) => set(k)(ev.target.value)}
-        />
+      <input className="input" value={draft ? draft[k] : ''} onChange={(ev) => set(k)(ev.target.value)} {...extra} />
     </div>
   );
   const selInput = (label: string, k: keyof Draft, opts: string[], span = 1) => (
@@ -194,7 +208,10 @@ export default function ExpenseDetail({ expense: e, done, onDone, onResolved, on
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: 'var(--space-3)' }}>
               {textInput('Descripción', 'desc', 2)}
-              {textInput('Monto (S/)', 'amt')}
+              {textInput('Monto (' + currencySymbol() + ')', 'amt', 1, { inputMode: 'decimal' })}
+              {selInput('Medio de pago', 'pay', payOpts)}
+              {textInput('Proveedor', 'prov')}
+              {textInput('RUC del proveedor', 'ruc', 1, { inputMode: 'numeric', maxLength: 11, placeholder: '11 dígitos' })}
               {selInput('Categoría', 'cat', cats)}
               {selInput('Tipo', 'type', ['Empresarial', 'Personal'])}
               {pedidos.length > 0 && selInput('Proyecto o pedido', 'proj', projOpts, 2)}

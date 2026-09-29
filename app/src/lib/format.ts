@@ -1,5 +1,11 @@
+const SYMBOL = { PEN: 'S/', USD: 'US$' } as const;
+let currency: keyof typeof SYMBOL = 'PEN';
+/** Moneda de la organización activa (la fija AppState). */
+export const setCurrency = (c: keyof typeof SYMBOL) => { currency = c; };
+export const currencySymbol = () => SYMBOL[currency];
+
 export const money = (n: number) =>
-  'S/ ' + n.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  SYMBOL[currency] + ' ' + n.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'set', 'oct', 'nov', 'dic'];
 

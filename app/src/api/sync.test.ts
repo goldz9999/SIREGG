@@ -33,14 +33,26 @@ describe('planSync', () => {
   it('editar un gasto ya registrado hace PATCH', () => {
     expect(planSync({ ...base, st: 'ok' }, { st: 'ok', desc: 'Nuevo texto' }, cats, peds)).toEqual({ kind: 'patch', body: { descripcion: 'Nuevo texto' } });
   });
-  it('campos que el backend no edita desde el gasto (proveedor, RUC, medio de pago) no llaman a la API', () => {
-    expect(planSync({ ...base, st: 'ok' }, { prov: 'Otro', ruc: '20123456789', pay: 'Efectivo' }, cats, peds)).toEqual({ kind: 'none' });
-  });
   it('asignar un proyecto envía su pedido_id; quitarlo envía null', () => {
     expect(planSync({ ...base, st: 'ok' }, { proj: 'Obra Surco' }, cats, peds)).toEqual({ kind: 'patch', body: { pedido_id: 3 } });
     expect(planSync({ ...base, st: 'ok', proj: 'Obra Surco' }, { proj: '' }, cats, peds)).toEqual({ kind: 'patch', body: { pedido_id: null } });
   });
   it('un proyecto que no existe en el backend se ignora', () => {
     expect(planSync({ ...base, st: 'ok' }, { proj: 'Fantasma' }, cats, peds)).toEqual({ kind: 'none' });
+  });
+  it('proveedor nuevo: manda el nombre (y el RUC si cambió)', () => {
+    expect(planSync(base, { st: 'ok', prov: 'Uber', ruc: '' }, cats, peds)).toEqual({ kind: 'patch', body: { proveedor_nombre: 'Uber' } });
+    expect(planSync(base, { st: 'ok', prov: 'Uber', ruc: '20123456789' }, cats, peds))
+      .toEqual({ kind: 'patch', body: { proveedor_nombre: 'Uber', proveedor_ruc: '20123456789' } });
+  });
+  it('solo cambia el RUC: corrige el del proveedor actual; vacío lo borra', () => {
+    expect(planSync(base, { st: 'ok', ruc: '20123456789' }, cats, peds))
+      .toEqual({ kind: 'patch', body: { proveedor_nombre: 'Cabify', proveedor_ruc: '20123456789' } });
+    expect(planSync({ ...base, ruc: '20123456789' }, { st: 'ok', ruc: '' }, cats, peds))
+      .toEqual({ kind: 'patch', body: { proveedor_nombre: 'Cabify', proveedor_ruc: null } });
+  });
+  it('medio de pago: se manda en minúsculas; sin cambios no llama a la API', () => {
+    expect(planSync(base, { st: 'ok', pay: 'Efectivo' }, cats, peds)).toEqual({ kind: 'patch', body: { medio_pago: 'efectivo' } });
+    expect(planSync({ ...base, st: 'ok' }, { prov: 'Cabify', ruc: '', pay: 'Yape' }, cats, peds)).toEqual({ kind: 'none' });
   });
 });

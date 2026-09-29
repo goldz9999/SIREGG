@@ -36,11 +36,12 @@ export function Seg<T extends string>({ name, value, options, onChange, optStyle
   );
 }
 
-export function Select({ value, options, onChange, label, style, className = 'input' }: {
+export function Select({ value, options, onChange, label, style, className = 'input', id, disabled }: {
   value: string; options: { v: string; l?: string }[]; onChange: (v: string) => void; label?: string; style?: CSSProperties; className?: string;
+  id?: string; disabled?: boolean;
 }) {
   return (
-    <select className={className} value={value} aria-label={label} onChange={(e) => onChange(e.target.value)} style={style}>
+    <select id={id} disabled={disabled} className={className} value={value} aria-label={label} onChange={(e) => onChange(e.target.value)} style={style}>
       {options.map((o) => <option key={o.v} value={o.v}>{o.l ?? o.v}</option>)}
     </select>
   );
@@ -101,5 +102,18 @@ export function Pref({ on, label, desc, onToggle }: { on: boolean; label: string
         <span className="muted" style={{ fontSize: 13 }}>{desc}</span>
       </span>
     </label>
+  );
+}
+
+/** Avatar de una organización: su logotipo si lo tiene, si no sus iniciales sobre su color. */
+export function CoAvatar({ co, size, fontSize }: { co: { initials: string; color: string; logoUrl: string | null; name: string }; size: number; fontSize: number }) {
+  const [broken, setBroken] = useState(false);
+  const logo = co.logoUrl && !broken;
+  return (
+    <span className="avatar" style={{ width: size, height: size, fontSize, background: logo ? 'var(--color-surface)' : co.color, overflow: 'hidden' }}>
+      {logo
+        ? <img src={co.logoUrl!} alt={'Logotipo de ' + co.name} onError={() => setBroken(true)} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+        : co.initials}
+    </span>
   );
 }

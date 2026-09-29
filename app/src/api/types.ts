@@ -24,7 +24,16 @@ export interface ApiUsuarioLista {
   empresas: { empresa_id: number; rol: RolEmpresa }[];
 }
 
-export interface ApiEmpresa { id: number; nombre: string; activa: boolean; logo_url: string | null }
+export type Moneda = 'PEN' | 'USD';
+export interface ApiEmpresa {
+  id: number;
+  nombre: string;
+  activa: boolean;
+  logo_url: string | null;
+  ruc?: string | null;
+  direccion?: string | null;
+  moneda?: Moneda;
+}
 export interface ApiCategoria { id: number; nombre: string; empresa_id: number }
 
 export interface ApiGasto {
@@ -42,7 +51,7 @@ export interface ApiGasto {
   pedido_id: number | null;
   creado_en: string;
   categorias: { nombre: string } | null;
-  proveedores: { nombre: string } | null;
+  proveedores: { nombre: string; ruc?: string | null } | null;
   pedidos: { nombre: string } | null;
   comprobantes: { id: number; numero: string | null; tipo: string }[];
   pagos: { id: number; medio: string; numero_operacion: string | null }[];

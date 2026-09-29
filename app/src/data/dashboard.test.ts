@@ -3,7 +3,7 @@ import type { ApiResumen } from '../api/types';
 import { buildDashboard } from './dashboard';
 import type { Company, Expense } from './types';
 
-const co: Company = { id: '1', name: 'Demo', short: 'Demo', initials: 'D', role: 'Administrador', color: '#000', kind: 'Empresa', review: 0 };
+const co: Company = { id: '1', name: 'Demo', short: 'Demo', initials: 'D', role: 'Administrador', color: '#000', kind: 'Empresa', review: 0, ruc: '', address: '', currency: 'PEN', logoUrl: null };
 
 const dias = Array.from({ length: 14 }, (_, i) => ({ fecha: `2026-09-${String(15 + i).padStart(2, '0')}`, total: i === 13 ? 300 : 100 }));
 const resumen: ApiResumen = {

@@ -1,6 +1,20 @@
 import type { Expense } from '../data/types';
 
-export interface PatchBody { monto?: number; descripcion?: string; es_personal?: boolean; categoria_id?: number; pedido_id?: number | null }
+export type MedioPago = 'yape' | 'transferencia' | 'efectivo' | 'tarjeta' | 'otro';
+
+export interface PatchBody {
+  monto?: number;
+  descripcion?: string;
+  es_personal?: boolean;
+  categoria_id?: number;
+  pedido_id?: number | null;
+  proveedor_nombre?: string;
+  /** Solo si cambió; null o '' borra el RUC del proveedor. */
+  proveedor_ruc?: string | null;
+  medio_pago?: MedioPago;
+}
+
+const MEDIO: Record<string, MedioPago> = { Yape: 'yape', Transferencia: 'transferencia', Efectivo: 'efectivo', Tarjeta: 'tarjeta', Otro: 'otro' };
 
 export type SyncPlan =
   | { kind: 'none' }
@@ -14,7 +28,8 @@ export type SyncPlan =
  * "Conservar ambos" (dup→ok) = el backend lo llama descartar-duplicado (NO es el mismo pago);
  * "Descartar este gasto" (dup→desc) = confirmar-duplicado (SÍ es el mismo pago, no suma a totales).
  * Si además se corrigieron datos, `body` se guarda DESPUÉS de resolver el duplicado.
- * Proveedor, RUC y medio de pago no se editan desde el gasto: no llaman a la API.
+ * Proveedor y RUC se mandan juntos cuando cambia el proveedor (el backend lo busca o lo crea);
+ * si solo cambia el RUC, se corrige el del proveedor. `cats` son las categorías de la empresa del gasto.
  */
 export function planSync(
   cur: Expense,
@@ -37,6 +52,14 @@ export function planSync(
       if (ped) body.pedido_id = ped.id;
     }
   }
+  const prov = p.prov !== undefined ? p.prov.trim() : cur.prov;
+  const ruc = p.ruc !== undefined ? p.ruc.trim() : cur.ruc;
+  if (prov !== cur.prov && prov) body.proveedor_nombre = prov;
+  if (ruc !== cur.ruc) {
+    body.proveedor_ruc = ruc || null;
+    if (prov) body.proveedor_nombre = prov;
+  }
+  if (p.pay !== undefined && p.pay !== cur.pay && MEDIO[p.pay]) body.medio_pago = MEDIO[p.pay];
   const hasBody = Object.keys(body).length > 0;
 
   if (cur.st === 'dup' && p.st === 'ok') return hasBody ? { kind: 'descartarDuplicado', body } : { kind: 'descartarDuplicado' };

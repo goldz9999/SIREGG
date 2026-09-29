@@ -5,7 +5,7 @@ import type { PageId } from '../data/types';
 import { useMotion } from '../hooks/useMotion';
 import { useViewport } from '../hooks/useViewport';
 import { useApp, type ThemePref } from '../state/AppState';
-import { Icon, Seg } from './ui';
+import { CoAvatar, Icon, Seg } from './ui';
 
 type Popover = 'company' | 'notif' | 'profile' | null;
 
@@ -50,8 +50,20 @@ export default function Layout() {
   };
 
   const q = coQuery.trim().toLowerCase();
-  const coList = app.companies.filter((c) => !q || c.name.toLowerCase().includes(q));
-  const coEmpty = coList.length === 0;
+  const match = (c: { name: string }) => !q || c.name.toLowerCase().includes(q);
+  const coList = app.companies.filter((c) => c.kind === 'Empresa' && match(c));
+  const personalList = app.companies.filter((c) => c.kind === 'Personal' && match(c));
+  const coEmpty = coList.length === 0 && personalList.length === 0;
+  const coOption = (c: typeof co) => (
+    <button key={c.id} role="option" aria-selected={c.id === co.id} className={'co-opt' + (c.id === co.id ? ' on' : '')} onClick={() => switchTo(c.id)}>
+      <CoAvatar co={c} size={28} fontSize={12} />
+      <span className="stack grow" style={{ lineHeight: 1.2 }}>
+        <span style={{ fontSize: 14, fontWeight: 600 }}>{c.name}</span>
+        <span className="muted" style={{ fontSize: 12 }}>{c.kind === 'Personal' ? 'Tus gastos marcados como personales' : c.role}</span>
+      </span>
+      {c.id === co.id && <Icon n="ph-check" style={{ color: 'var(--color-accent)', fontSize: 18 }} />}
+    </button>
+  );
   // Avisos calculados con los conteos reales de la empresa activa.
   const cnt = app.counts;
   const notifs: { icon: string; c: 'a' | 'a2'; text: string }[] = [
@@ -76,7 +88,7 @@ export default function Layout() {
 
         <div style={{ position: 'relative', zIndex: 45 }}>
           <button className="co-btn" onClick={() => toggle('company')} aria-expanded={open === 'company'} aria-haspopup="listbox">
-            <span className="avatar" style={{ width: 36, height: 36, fontSize: 14, background: co.color }}>{co.initials}</span>
+            <CoAvatar co={co} size={36} fontSize={14} />
             <span className="stack grow minw0" style={{ lineHeight: 1.2 }}>
               <span className="ellipsis" style={{ fontWeight: 600, fontSize: 15 }}>{co.name}</span>
               <span className="muted" style={{ fontSize: 12 }}>{co.role} · {co.kind}</span>
@@ -86,17 +98,10 @@ export default function Layout() {
           {open === 'company' && (
             <div data-pop="1" role="listbox" className="pop" style={{ left: 0, right: 0, top: 'calc(100% + 6px)', padding: 'var(--space-2)', gap: 2 }}>
               <input className="input" placeholder="Buscar organización…" value={coQuery} onChange={(e) => setCoQuery(e.target.value)} style={{ marginBottom: 'var(--space-1)' }} autoFocus />
-              <div className="nav-label" style={{ padding: 'var(--space-1) var(--space-2)' }}>Organizaciones</div>
-              {coList.map((c) => (
-                <button key={c.id} role="option" aria-selected={c.id === co.id} className={'co-opt' + (c.id === co.id ? ' on' : '')} onClick={() => switchTo(c.id)}>
-                  <span className="avatar" style={{ width: 28, height: 28, fontSize: 12, background: c.color }}>{c.initials}</span>
-                  <span className="stack grow" style={{ lineHeight: 1.2 }}>
-                    <span style={{ fontSize: 14, fontWeight: 600 }}>{c.name}</span>
-                    <span className="muted" style={{ fontSize: 12 }}>{c.role}</span>
-                  </span>
-                  {c.id === co.id && <Icon n="ph-check" style={{ color: 'var(--color-accent)', fontSize: 18 }} />}
-                </button>
-              ))}
+              {coList.length > 0 && <div className="nav-label" style={{ padding: 'var(--space-1) var(--space-2)' }}>Organizaciones</div>}
+              {coList.map(coOption)}
+              {personalList.length > 0 && <div className="nav-label" style={{ padding: 'var(--space-2) var(--space-2) var(--space-1)' }}>Personal</div>}
+              {personalList.map(coOption)}
               {coEmpty && <div className="muted" style={{ padding: 'var(--space-2)', fontSize: 14 }}>Sin coincidencias.</div>}
             </div>
           )}
@@ -133,7 +138,7 @@ export default function Layout() {
             <>
               <button className="btn btn-ghost btn-icon" aria-label="Abrir menú" onClick={() => setDrawer(true)}><Icon n="ph-list" style={{ fontSize: 22 }} /></button>
               <button onClick={() => setDrawer(true)} className="row" style={{ gap: 6, border: 0, background: 'transparent', color: 'inherit', cursor: 'pointer', minHeight: 44, minWidth: 0 }}>
-                <span className="avatar" style={{ width: 26, height: 26, fontSize: 11, background: co.color }}>{co.initials}</span>
+                <CoAvatar co={co} size={26} fontSize={11} />
                 <span className="ellipsis" style={{ fontWeight: 600, fontSize: 14, maxWidth: '36vw' }}>{co.short}</span>
               </button>
             </>
@@ -217,7 +222,7 @@ function PageHeader({ page }: { page: PageId }) {
   const navigate = useNavigate();
   const app = useApp();
   const isDash = page === 'dashboard' && !loading;
-  const scope = 'Todos los gastos de la organización';
+  const scope = app.personal ? 'Tus gastos personales en todas tus organizaciones' : 'Todos los gastos de la organización';
   let actions: ReactNode = null;
   if (isDash) {
     const goReports = () => app.allowed.includes('reportes') ? navigate('/reportes') : app.showToast('Tu rol no tiene acceso a Reportes en ' + co.short, 'ph-lock');

@@ -1,11 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import * as endpoints from '../api/endpoints';
-import { mapGasto } from '../api/mappers';
+import { mapGasto, PERSONAL, PERSONAL_ID } from '../api/mappers';
 import { planSync } from '../api/sync';
 import type { ApiCategoria, ApiConteos, ApiPedido, ApiProveedor, ApiResumen } from '../api/types';
 import { isPending } from '../data/expenses';
 import { PERMS } from '../data/org';
 import type { Company, Expense, PageId } from '../data/types';
+import { setCurrency } from '../lib/format';
 import { useAuth, type SessionUser } from './Auth';
 
 export type ThemePref = 'light' | 'dark' | 'auto';
@@ -18,8 +19,11 @@ interface AppState {
   setTheme: (t: ThemePref) => void;
   user: SessionUser;
   logout: () => void;
+  /** Empresas del usuario más el espacio "Gastos personales" (al final). */
   companies: Company[];
   co: Company;
+  /** True en el espacio "Gastos personales". */
+  personal: boolean;
   allowed: PageId[];
   loading: boolean;
   /** Cambia de empresa; devuelve la página a la que ir (dashboard si el rol no puede ver `page`). */
@@ -54,8 +58,8 @@ function readStored(): { theme?: ThemePref; coId?: string; page?: PageId } {
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const auth = useAuth();
-  const companies = auth.companies;
   const user = auth.user!;
+  const companies = useMemo(() => [...auth.companies, PERSONAL], [auth.companies]);
   const stored = useRef(readStored()).current;
   const [theme, setThemeState] = useState<ThemePref>(stored.theme || 'light');
   const [sysDark, setSysDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -112,15 +116,25 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   // Carga de la empresa activa. Un cambio de empresa muestra el estado de carga;
   // una recarga tras guardar (silentRef) no desmonta la pantalla.
+  // En "Gastos personales" se piden mis gastos personales de todas mis empresas y las
+  // categorías de cada una (el detalle del gasto ofrece las de la empresa del gasto).
+  const empresaIds = useMemo(() => auth.companies.map((c) => Number(c.id)), [auth.companies]);
   useEffect(() => {
     let alive = true;
     const empresaId = Number(coId);
     if (silentRef.current) silentRef.current = false;
     else setLoading(true);
-    Promise.all([
-      endpoints.listGastos(empresaId), endpoints.conteos(empresaId), endpoints.resumen(empresaId),
-      endpoints.categorias(empresaId), endpoints.listPedidos(empresaId), endpoints.listProveedores(empresaId),
-    ])
+    const load = coId === PERSONAL_ID
+      ? Promise.all([
+        endpoints.listGastosPersonales(), endpoints.conteosPersonal(), endpoints.resumenPersonal(),
+        Promise.all(empresaIds.map((id) => endpoints.categorias(id))).then((l) => l.flat()),
+        Promise.resolve([] as ApiPedido[]), Promise.resolve([] as ApiProveedor[]),
+      ] as const)
+      : Promise.all([
+        endpoints.listGastos(empresaId), endpoints.conteos(empresaId), endpoints.resumen(empresaId),
+        endpoints.categorias(empresaId), endpoints.listPedidos(empresaId), endpoints.listProveedores(empresaId),
+      ] as const);
+    load
       .then(([g, c, r, cats, peds, provs]) => {
         if (!alive) return;
         setGastos(g.map(mapGasto));
@@ -138,13 +152,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, [coId, reloadTick, showToast]);
+  }, [coId, empresaIds, reloadTick, showToast]);
 
   const reload = useCallback(() => { silentRef.current = true; setReloadTick((t) => t + 1); }, []);
 
   const base = companies.find((c) => c.id === coId) ?? companies[0];
   const co = useMemo<Company>(() => ({ ...base, review: counts?.requiereRevision ?? 0 }), [base, counts]);
   const allowed = PERMS[co.role];
+  const personal = co.id === PERSONAL_ID;
+  // Se fija durante el render para que los montos ya salgan con la moneda correcta.
+  setCurrency(co.currency);
 
   const switchCompany = useCallback((id: string, page: PageId): PageId => {
     const next = companies.find((c) => c.id === id);
@@ -154,7 +171,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setCoId(id);
     setLastPage(target);
     setGastos([]); setCounts(null); setResumen(null); setCategories([]); setPedidos([]); setProveedores([]);
-    endpoints.setEmpresaActiva(Number(id)).catch(() => { /* solo recuerda la preferencia */ });
+    if (id !== PERSONAL_ID) endpoints.setEmpresaActiva(Number(id)).catch(() => { /* solo recuerda la preferencia */ });
     showToast('Ahora en ' + next.name, 'ph-arrows-left-right');
     return target;
   }, [companies, coId, showToast]);
@@ -170,11 +187,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const patchExpense = useCallback((id: string, p: Partial<Expense>) => {
     const cur = expensesRef.current.find((e) => e.id === id);
     if (!cur) return;
-    const plan = planSync(cur, p, categories, pedidos.map((x) => ({ id: x.id, nombre: x.nombre })));
+    // Las acciones van contra la empresa del gasto (en el espacio personal se mezclan varias).
+    const empresaId = cur.empresaId ?? Number(coId);
+    if (!Number.isInteger(empresaId)) return;
+    const cats = categories.filter((c) => c.empresa_id === empresaId);
+    const plan = planSync(cur, p, cats, pedidos.map((x) => ({ id: x.id, nombre: x.nombre })));
     if (plan.kind === 'none') return;
     setOverlay((s) => ({ ...s, [id]: { ...(s[id] || {}), ...p } }));
     const n = Number(id);
-    const empresaId = Number(coId);
 
     const run = async () => {
       if (plan.kind === 'patch') { await endpoints.patchGasto(n, empresaId, plan.body); return; }
@@ -198,7 +218,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   }, [coId, categories, pedidos, reload, showToast]);
 
   const value: AppState = {
-    theme, dark, setTheme: setThemeState, user, logout: auth.logout, companies, co, allowed, loading, switchCompany,
+    theme, dark, setTheme: setThemeState, user, logout: auth.logout, companies, co, personal, allowed, loading, switchCompany,
     expenses, pendingCount, resumen, counts, categories, pedidos, proveedores, patchExpense, reload,
     toast, showToast, hideToast: () => setToast(null),
     lastPage, rememberPage: setLastPage,
