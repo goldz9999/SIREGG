@@ -44,19 +44,41 @@ export function statusOf(g: Pick<ApiGasto, 'pendiente_revision' | 'posible_dupli
   return g.posible_duplicado_de != null ? 'desc' : 'ok';
 }
 
+// Cada archivo que llega (foto de factura, captura de Yape…) se guarda en el mismo
+// instante que el registro que generó: su comprobante o su pago. Así se sabe qué foto
+// es de qué, sin duplicarla. Entre un archivo y otro pasan segundos (lectura con IA).
+const MISMO_ARCHIVO_MS = 3000;
+const ms = (iso?: string) => (iso ? Date.parse(iso) : NaN);
+
 function mapEvidence(g: ApiGasto): Evidence[] {
-  const ev: Evidence[] = [];
-  // La factura y la constancia de pago no traen archivo propio: su imagen es la foto
-  // que llegó con el gasto. Con dos fotos (factura + Yape), la primera es la factura
-  // y la última el pago; con una sola, esa sirve para ambos.
-  const fotos = (g.evidencias ?? []).filter((e) => e.tipo !== 'audio' && e.url).map((e) => e.url as string);
-  for (const c of g.comprobantes ?? []) ev.push({ k: c.tipo === 'boleta' ? 'Boleta' : 'Factura', file: c.numero ?? 'comprobante-' + c.id, url: fotos[0] ?? null });
+  const registros: { ev: Evidence; t: number; comprobante: boolean }[] = [];
+  for (const c of g.comprobantes ?? []) {
+    registros.push({ ev: { k: c.tipo === 'boleta' ? 'Boleta' : 'Factura', file: c.numero ?? 'comprobante-' + c.id, url: null }, t: ms(c.creado_en), comprobante: true });
+  }
   for (const p of g.pagos ?? []) {
     const k = p.medio === 'yape' ? 'Yape' : p.medio === 'transferencia' ? 'Transferencia' : null;
-    if (k) ev.push({ k, file: (p.numero_operacion ?? 'pago') + '-' + p.id, url: fotos[fotos.length - 1] ?? null });
+    if (k) registros.push({ ev: { k, file: p.numero_operacion ?? 'pago-' + p.id, url: null }, t: ms(p.creado_en), comprobante: false });
   }
-  for (const e of g.evidencias ?? []) ev.push({ k: e.tipo === 'audio' ? 'Audio' : 'Foto', file: e.storage_path, url: e.url ?? null });
-  return ev;
+
+  const sueltas: Evidence[] = [];
+  const audios: Evidence[] = [];
+  for (const e of g.evidencias ?? []) {
+    if (e.tipo === 'audio') { audios.push({ k: 'Audio', file: e.storage_path, url: e.url ?? null }); continue; }
+    const t = ms(e.creado_en);
+    // El registro más cercano en el tiempo que aún no tenga foto; si una factura trae
+    // también el pago (mismo archivo), la foto es de la factura.
+    let mejor: (typeof registros)[number] | null = null;
+    for (const r of registros) {
+      if (r.ev.url || Number.isNaN(t) || Number.isNaN(r.t)) continue;
+      const d = Math.abs(t - r.t);
+      if (d > MISMO_ARCHIVO_MS) continue;
+      const dm = mejor ? Math.abs(t - mejor.t) : Infinity;
+      if (d < dm - 50 || (Math.abs(d - dm) <= 50 && r.comprobante && !mejor?.comprobante)) mejor = r;
+    }
+    if (mejor && e.url) mejor.ev.url = e.url;
+    else sueltas.push({ k: 'Foto', file: e.storage_path, url: e.url ?? null });
+  }
+  return [...registros.filter((r) => r.comprobante).map((r) => r.ev), ...registros.filter((r) => !r.comprobante).map((r) => r.ev), ...sueltas, ...audios];
 }
 
 function channelOf(g: ApiGasto): string {

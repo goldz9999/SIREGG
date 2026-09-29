@@ -47,7 +47,7 @@ export default function Comprobantes() {
                   : <Icon n={icon} style={{ fontSize: 40, color: g === 'Comprobante' ? 'var(--color-accent)' : 'var(--color-neutral-700)' }} />}
               </span>
               <span className="row" style={{ justifyContent: 'space-between', gap: 'var(--space-2)' }}>
-                <span className={GROUP_CLS[g]}>{g}</span><span className="muted" style={{ fontSize: 13 }}>{f.k}</span>
+                <span className={GROUP_CLS[g]}>{g}</span><span className="muted" style={{ fontSize: 13 }}>{g === 'Pago' ? 'Pago con ' + f.k : g === 'Comprobante' ? f.k + ' ' + f.file : f.k}</span>
               </span>
               <span style={{ fontWeight: 600, fontSize: 15 }}>{e.prov}</span>
               <span className="row" style={{ justifyContent: 'space-between', fontSize: 13, color: 'var(--color-neutral-800)' }}>

@@ -14,15 +14,15 @@ export default function FilePreview({ expense: e, index, onClose, onGoToExpense 
   const amtL = money(e.amt);
   const rows: [string, string][] =
     group === 'Comprobante'
-      ? [['Tipo', f.k], ['Número', f.file], ['Proveedor', e.prov || '—'], ['Fecha', dateL], ['Descripción', e.desc || '—'], ['Monto', amtL]]
+      ? [['Tipo', f.k + ' (comprobante de compra)'], ['Número', f.file], ['Proveedor', e.prov || '—'], ['Fecha', dateL], ['Descripción', e.desc || '—'], ['Monto', amtL]]
       : group === 'Pago'
-        ? [['Medio', f.k], ['Operación', e.op || '—'], ['Pagado a', e.prov || '—'], ['Fecha', dateL], ['Monto', amtL]]
+        ? [['Medio de pago', f.k], ['Operación', f.file], ['Pagado a', e.prov || '—'], ['Fecha', dateL], ['Monto', amtL]]
         : [];
 
   return (
     <Dialog onClose={onClose} width={f.url && f.k !== 'Audio' ? 760 : 520}>
       <div className="row" style={{ justifyContent: 'space-between', gap: 'var(--space-2)' }}>
-        <div className="row" style={{ gap: 'var(--space-2)' }}><span className={GROUP_CLS[group]}>{group}</span><strong>{f.k}</strong></div>
+        <div className="row" style={{ gap: 'var(--space-2)' }}><span className={GROUP_CLS[group]}>{group}</span><strong>{group === 'Pago' ? 'Pago con ' + f.k : group === 'Comprobante' ? f.k + ' N.º ' + f.file : f.k}</strong></div>
         <button className="btn btn-ghost btn-icon" aria-label="Cerrar" onClick={onClose}><Icon n="ph-x" /></button>
       </div>
 

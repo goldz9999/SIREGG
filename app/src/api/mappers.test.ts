@@ -27,14 +27,29 @@ describe('mapGasto', () => {
     expect(e.ev[2].url).toBe('https://x/a.webp');
   });
 
-  it('la factura y el pago muestran la foto del gasto (factura = primera, pago = última)', () => {
-    const e = mapGasto(gasto({ evidencias: [
-      { id: 1, tipo: 'imagen', origen: 'telegram', storage_path: 'f.webp', url: 'https://x/factura.webp' },
-      { id: 2, tipo: 'imagen', origen: 'telegram', storage_path: 'y.webp', url: 'https://x/yape.webp' },
-    ] }));
-    expect(e.ev.find((x) => x.k === 'Factura')?.url).toBe('https://x/factura.webp');
-    expect(e.ev.find((x) => x.k === 'Yape')?.url).toBe('https://x/yape.webp');
-    expect(mapGasto(gasto({ evidencias: [] })).ev.find((x) => x.k === 'Factura')?.url).toBeNull();
+  it('cada foto va con la factura o el pago guardado en el mismo instante, sin duplicarse', () => {
+    // Llega primero el Yape y 6 s después la factura (como un álbum por Telegram).
+    const e = mapGasto(gasto({
+      comprobantes: [{ id: 3, numero: '000014', tipo: 'factura', creado_en: '2026-09-29T22:01:56.467Z' }],
+      pagos: [{ id: 1, medio: 'yape', numero_operacion: '06924092', creado_en: '2026-09-29T22:01:50.977Z' }],
+      evidencias: [
+        { id: 3, tipo: 'imagen', origen: 'telegram', storage_path: 'yape.webp', url: 'https://x/yape.webp', creado_en: '2026-09-29T22:01:50.665Z' },
+        { id: 4, tipo: 'imagen', origen: 'telegram', storage_path: 'factura.webp', url: 'https://x/factura.webp', creado_en: '2026-09-29T22:01:56.649Z' },
+      ],
+    }));
+    expect(e.ev).toEqual([
+      { k: 'Factura', file: '000014', url: 'https://x/factura.webp' },
+      { k: 'Yape', file: '06924092', url: 'https://x/yape.webp' },
+    ]);
+  });
+
+  it('una foto sin factura ni pago cercano queda como evidencia suelta', () => {
+    const e = mapGasto(gasto({
+      comprobantes: [{ id: 1, numero: 'F1', tipo: 'factura', creado_en: '2026-09-29T10:00:00Z' }],
+      pagos: [],
+      evidencias: [{ id: 1, tipo: 'imagen', origen: 'web', storage_path: 'otra.webp', url: 'https://x/otra.webp', creado_en: '2026-09-29T11:00:00Z' }],
+    }));
+    expect(e.ev.map((x) => [x.k, x.url])).toEqual([['Factura', null], ['Foto', 'https://x/otra.webp']]);
   });
 
   it('estados: pendiente, duplicado pendiente, duplicado confirmado', () => {

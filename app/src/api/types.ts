@@ -72,9 +72,9 @@ export interface ApiGasto {
   categorias: { nombre: string } | null;
   proveedores: { nombre: string; ruc?: string | null } | null;
   pedidos: { nombre: string } | null;
-  comprobantes: { id: number; numero: string | null; tipo: string }[];
-  pagos: { id: number; medio: string; numero_operacion: string | null }[];
-  evidencias: { id: number; tipo: string; origen: string; storage_path: string; url?: string | null }[];
+  comprobantes: { id: number; numero: string | null; tipo: string; creado_en?: string }[];
+  pagos: { id: number; medio: string; numero_operacion: string | null; creado_en?: string }[];
+  evidencias: { id: number; tipo: string; origen: string; storage_path: string; url?: string | null; creado_en?: string }[];
 }
 
 export interface ApiResumen {

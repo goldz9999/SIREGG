@@ -112,7 +112,7 @@ export default function ExpenseDetail({ expense: e, done, onDone, onResolved, on
     ['Monto', money(x.amt)], ['Medio', x.pay || '—'], ['Registró', x.user || '—'],
   ];
   // Imágenes para comparar: las fotos del gasto (con su índice en ev para abrir la vista previa).
-  const fotosDe = (x: Expense) => x.ev.map((f, j) => ({ f, j })).filter(({ f }) => f.k === 'Foto' && f.url);
+  const fotosDe = (x: Expense) => x.ev.map((f, j) => ({ f, j })).filter(({ f }) => f.url && f.k !== 'Audio');
   const [stLabel, stCls] = STAT[e.st];
 
   const fields: [string, string][] = [
@@ -246,17 +246,30 @@ export default function ExpenseDetail({ expense: e, done, onDone, onResolved, on
         <div className="stack" style={{ gap: 20 }}>
           <div data-a="1" className="panel">
             <h3 className="panel-title">Comprobantes y evidencias</h3>
-            {e.ev.map((f, j) => {
-              const [group, icon] = KIND[f.k];
+            {(['Comprobante', 'Pago', 'Evidencia'] as const).map((grupo) => {
+              const items = e.ev.map((f, j) => ({ f, j })).filter(({ f }) => KIND[f.k][0] === grupo);
+              if (!items.length) return null;
               return (
-                <button key={f.file} data-a="1" onClick={() => setPreview(j)} className="list-btn hover-n100"
-                  style={{ gap: 'var(--space-3)', padding: 'var(--space-2)', margin: '0 calc(var(--space-2) * -1)', borderRadius: 'var(--radius-md)', minHeight: 48 }}>
-                  {f.url && f.k !== 'Audio'
-                    ? <img src={f.url} alt="" loading="lazy" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 8, flex: 'none', background: 'var(--color-neutral-200)' }} />
-                    : <Icon n={icon} style={{ fontSize: 22, color: 'var(--color-accent)' }} />}
-                  <span className="stack grow" style={{ lineHeight: 1.3 }}><span style={{ fontSize: 15 }}>{f.k}</span><span className="muted" style={{ fontSize: 12 }}>{f.file}</span></span>
-                  <span className={GROUP_CLS[group]}>{group}</span>
-                </button>
+                <div key={grupo} className="stack" style={{ gap: 2 }}>
+                  <div className="nav-label" style={{ padding: 'var(--space-2) 0 var(--space-1)' }}>
+                    {grupo === 'Comprobante' ? 'Comprobante de compra' : grupo === 'Pago' ? 'Pago' : 'Otros archivos'}
+                  </div>
+                  {items.map(({ f, j }) => {
+                    const icon = KIND[f.k][1];
+                    const titulo = grupo === 'Comprobante' ? f.k + ' N.º ' + f.file : grupo === 'Pago' ? 'Pago con ' + f.k : f.k;
+                    const detalle = grupo === 'Pago' ? 'Operación N.º ' + f.file : grupo === 'Comprobante' ? (f.url ? 'Foto de la ' + f.k.toLowerCase() : 'Sin foto') : f.file;
+                    return (
+                      <button key={j} data-a="1" onClick={() => setPreview(j)} className="list-btn hover-n100"
+                        style={{ gap: 'var(--space-3)', padding: 'var(--space-2)', margin: '0 calc(var(--space-2) * -1)', borderRadius: 'var(--radius-md)', minHeight: 48 }}>
+                        {f.url && f.k !== 'Audio'
+                          ? <img src={f.url} alt="" loading="lazy" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 8, flex: 'none', background: 'var(--color-neutral-200)' }} />
+                          : <Icon n={icon} style={{ fontSize: 22, color: 'var(--color-accent)' }} />}
+                        <span className="stack grow" style={{ lineHeight: 1.3 }}><span style={{ fontSize: 15 }}>{titulo}</span><span className="muted" style={{ fontSize: 12 }}>{detalle}</span></span>
+                        <span className={GROUP_CLS[grupo]}>{grupo}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               );
             })}
             {!e.ev.length && <span className="muted" style={{ fontSize: 14 }}>Registrado por mensaje de texto, sin archivos adjuntos.</span>}
