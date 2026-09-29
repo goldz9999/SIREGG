@@ -77,13 +77,17 @@ const POOLS: Record<string, Pool> = {
   },
 };
 
+const EMPTY_POOL: Pool = { v: [], p: [], u: [] };
+/** Las empresas reales (ids numéricos) no tienen pool demo: devuelven vacío. */
+const poolOf = (coId: string): Pool => POOLS[coId] ?? EMPTY_POOL;
+
 /** Categories a company uses by default (in vendor order). */
-export const baseCategories = (coId: string) => uniq(POOLS[coId].v.map((v) => v[1]));
+export const baseCategories = (coId: string) => uniq(poolOf(coId).v.map((v) => v[1]));
 /** Built-in projects/orders for a company. */
-export const baseProjects = (coId: string) => POOLS[coId].p;
+export const baseProjects = (coId: string) => poolOf(coId).p;
 /** Vendors the AI suggests a category for. */
 export const vendorsForCategory = (coId: string, cat: string) =>
-  uniq(POOLS[coId].v.filter((v) => v[1] === cat).map((v) => v[0]));
+  uniq(poolOf(coId).v.filter((v) => v[1] === cat).map((v) => v[0]));
 
 export const STAT: Record<Status, [label: string, tagClass: string]> = {
   proc: ['Procesando', 'tag tag-neutral'],
