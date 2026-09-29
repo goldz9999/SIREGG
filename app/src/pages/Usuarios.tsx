@@ -1,23 +1,39 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { crearUsuario, listUsuarios } from '../api/endpoints';
+import { mapMember, toRolEmpresa } from '../api/mappers';
 import { Dialog, Icon, Select } from '../components/ui';
-import { getMembers, ROLE_DOCS, ROLES } from '../data/org';
+import { ROLE_DOCS, ROLES } from '../data/org';
 import type { Member, Role } from '../data/types';
 import { initials } from '../lib/format';
 import { useViewport } from '../hooks/useViewport';
 import { useApp } from '../state/AppState';
 
+interface NewMember { name: string; email: string; password: string; role: Role }
+
 export default function Usuarios() {
-  const { co, edits, setEdits, showToast } = useApp();
+  const { co, edits, setEdits, showToast, user } = useApp();
   const { w } = useViewport();
-  const [invite, setInvite] = useState<{ email: string; role: Role } | null>(null);
+  const [invite, setInvite] = useState<NewMember | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [apiMembers, setApiMembers] = useState<Member[]>([]);
+  const [tick, setTick] = useState(0);
+
+  // Miembros reales de la empresa activa (GET /usuarios); se recarga al crear uno.
+  useEffect(() => {
+    let alive = true;
+    const empresaId = Number(co.id);
+    listUsuarios(empresaId)
+      .then((list) => { if (alive) setApiMembers(list.map((u) => mapMember(u, empresaId, user.id))); })
+      .catch((e) => { if (alive) showToast(e instanceof Error ? e.message : 'No se pudieron cargar los miembros.', 'ph-warning-circle'); });
+    return () => { alive = false; };
+  }, [co.id, tick, user.id, showToast]);
 
   const myRole = co.role;
   const isOwner = myRole === 'Propietario';
   const canManage = isOwner || myRole === 'Administrador';
   // Only an owner can grant or change the owner role.
   const roleChoices = isOwner ? ROLES : ROLES.slice(1);
-  const members: Member[] = [...getMembers(co.id), ...(edits.invited[co.id] || [])]
-    .map((m) => ({ ...m, ...(edits.members[co.id + '|' + m.email] || {}) }));
+  const members: Member[] = apiMembers.map((m) => ({ ...m, ...(edits.members[co.id + '|' + m.email] || {}) }));
   const setM = (m: Member, p: Partial<Member>) => setEdits((s) => {
     const k = co.id + '|' + m.email;
     return { ...s, members: { ...s.members, [k]: { ...(s.members[k] || {}), ...p } } };
@@ -27,15 +43,25 @@ export default function Usuarios() {
   const cols = narrow ? '40px minmax(0,1fr)' : '40px minmax(0,1fr) 190px 170px 130px';
   const cellCol = narrow ? '2' : 'auto';
 
-  const sendInvite = () => {
-    if (!invite) return;
+  const sendInvite = async () => {
+    if (!invite || busy) return;
+    const name = invite.name.trim();
     const em = invite.email.trim();
+    if (!name) { showToast('Ingresa el nombre de la persona.', 'ph-warning-circle'); return; }
     if (!/^\S+@\S+\.\S+$/.test(em)) { showToast('Ingresa un correo válido.', 'ph-warning-circle'); return; }
-    if (members.some((m) => m.email === em)) { showToast('Ese correo ya es miembro.', 'ph-warning-circle'); return; }
-    const role = invite.role;
-    setEdits((s) => ({ ...s, invited: { ...s.invited, [co.id]: [...(s.invited[co.id] || []), { name: em.split('@')[0], email: em, role, inv: 'Pendiente', acc: '—' }] } }));
-    setInvite(null);
-    showToast('Invitación a ' + em + ' creada (demostración, no se envió correo).', 'ph-paper-plane-tilt');
+    if (invite.password.length < 6) { showToast('La contraseña temporal debe tener al menos 6 caracteres.', 'ph-warning-circle'); return; }
+    if (members.some((m) => m.email.toLowerCase() === em.toLowerCase())) { showToast('Ese correo ya es miembro.', 'ph-warning-circle'); return; }
+    setBusy(true);
+    try {
+      await crearUsuario(Number(co.id), { nombre: name, email: em, password: invite.password, rol_empresa: toRolEmpresa(invite.role) });
+      setInvite(null);
+      setTick((t) => t + 1);
+      showToast('Usuario ' + name + ' creado. Comparte la contraseña temporal con la persona.', 'ph-user-plus');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'No se pudo crear el usuario.', 'ph-warning-circle');
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -43,7 +69,7 @@ export default function Usuarios() {
       <div className="row wrap" style={{ gap: 'var(--space-2)' }}>
         <span style={{ fontSize: 14, color: 'var(--color-neutral-800)' }}>{members.length} miembros en {co.name}</span>
         <span className="grow" />
-        {canManage && <button className="btn btn-primary" onClick={() => setInvite({ email: '', role: 'Empleado' })}><Icon n="ph-user-plus" /> Invitar miembro</button>}
+        {canManage && <button className="btn btn-primary" onClick={() => setInvite({ name: '', email: '', password: '', role: 'Empleado' })}><Icon n="ph-user-plus" /> Agregar miembro</button>}
       </div>
       <div className="panel" style={{ gap: 0, padding: '4px 20px' }}>
         {members.map((m) => {
@@ -87,20 +113,30 @@ export default function Usuarios() {
 
       {invite && (
         <Dialog onClose={() => setInvite(null)}>
-          <div className="dialog-title">Invitar a {co.name}</div>
+          <div className="dialog-title">Agregar a {co.name}</div>
+          <div className="field">
+            <label htmlFor="inv-name">Nombre</label>
+            <input id="inv-name" className="input" autoFocus placeholder="Nombre y apellido" value={invite.name}
+              onChange={(e) => setInvite({ ...invite, name: e.target.value })} />
+          </div>
           <div className="field">
             <label htmlFor="inv-email">Correo electrónico</label>
-            <input id="inv-email" className="input" type="email" autoFocus placeholder="nombre@empresa.pe" value={invite.email}
-              onChange={(e) => setInvite({ ...invite, email: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') sendInvite(); }} />
+            <input id="inv-email" className="input" type="email" placeholder="nombre@empresa.pe" value={invite.email}
+              onChange={(e) => setInvite({ ...invite, email: e.target.value })} />
+          </div>
+          <div className="field">
+            <label htmlFor="inv-pass">Contraseña temporal</label>
+            <input id="inv-pass" className="input" type="text" autoComplete="off" placeholder="Mínimo 6 caracteres" value={invite.password}
+              onChange={(e) => setInvite({ ...invite, password: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') sendInvite(); }} />
           </div>
           <div className="field">
             <label>Rol</label>
             <Select label="Rol" value={invite.role} options={roleChoices.map((v) => ({ v }))} onChange={(v) => setInvite({ ...invite, role: v as Role })} />
           </div>
-          <span className="muted" style={{ fontSize: 13 }}>Demostración: no se enviará ningún correo.</span>
+          <span className="muted" style={{ fontSize: 13 }}>No se envía ningún correo: comparte la contraseña temporal con la persona.</span>
           <div className="dialog-actions">
             <button className="btn btn-ghost" onClick={() => setInvite(null)}>Cancelar</button>
-            <button className="btn btn-primary" onClick={sendInvite}>Enviar invitación</button>
+            <button className="btn btn-primary" onClick={sendInvite} disabled={busy}>{busy ? 'Creando…' : 'Crear usuario'}</button>
           </div>
         </Dialog>
       )}
