@@ -1,0 +1,34 @@
+import type { Expense } from '../data/types';
+
+export interface PatchBody { monto?: number; descripcion?: string; es_personal?: boolean; categoria_id?: number }
+
+export type SyncPlan =
+  | { kind: 'none' }
+  | { kind: 'confirmarConfianza' }
+  | { kind: 'confirmarDuplicado' }
+  | { kind: 'descartarDuplicado' }
+  | { kind: 'patch'; body: PatchBody };
+
+/**
+ * Decide qué endpoint corresponde a un cambio hecho desde la UI.
+ * "Conservar ambos" (dup→ok) = el backend lo llama descartar-duplicado (NO es el mismo pago);
+ * "Descartar este gasto" (dup→desc) = confirmar-duplicado (SÍ es el mismo pago, no suma a totales).
+ * Proyecto, proveedor, RUC y medio de pago no tienen endpoint: se quedan solo en la UI.
+ */
+export function planSync(cur: Expense, p: Partial<Expense>, cats: { id: number; nombre: string }[]): SyncPlan {
+  if (cur.st === 'dup' && p.st === 'ok') return { kind: 'descartarDuplicado' };
+  if (cur.st === 'dup' && p.st === 'desc') return { kind: 'confirmarDuplicado' };
+
+  const body: PatchBody = {};
+  if (p.amt !== undefined && p.amt !== cur.amt) body.monto = p.amt;
+  if (p.desc !== undefined && p.desc !== cur.desc) body.descripcion = p.desc;
+  if (p.type !== undefined && p.type !== cur.type) body.es_personal = p.type === 'Personal';
+  if (p.cat !== undefined && p.cat !== cur.cat) {
+    const c = cats.find((x) => x.nombre === p.cat);
+    if (c) body.categoria_id = c.id;
+  }
+  if (Object.keys(body).length) return { kind: 'patch', body };
+
+  if (cur.st === 'pend' && p.st === 'ok') return { kind: 'confirmarConfianza' };
+  return { kind: 'none' };
+}

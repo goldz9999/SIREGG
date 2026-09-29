@@ -24,6 +24,8 @@ export type EvidenceGroup = 'Comprobante' | 'Pago' | 'Evidencia';
 export interface Evidence {
   k: EvidenceKind;
   file: string;
+  /** URL firmada de la imagen real (solo datos del backend). */
+  url?: string | null;
 }
 
 export interface Expense {
