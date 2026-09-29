@@ -14,6 +14,10 @@ export interface Company {
   kind: 'Empresa' | 'Personal';
   /** Gastos pendientes de revisión (viene de /gastos/conteos). */
   review: number;
+  ruc: string;
+  address: string;
+  currency: 'PEN' | 'USD';
+  logoUrl: string | null;
 }
 
 export type Status = 'proc' | 'pend' | 'info' | 'dup' | 'ok' | 'err' | 'desc';
@@ -49,6 +53,10 @@ export interface Expense {
   conf?: string;
   /** Momento real de registro (ISO). */
   createdAt?: string;
+  /** Empresa del gasto (en "Gastos personales" se mezclan varias). */
+  empresaId?: number | null;
+  /** Usuario que registró el gasto. */
+  userId?: number | null;
 }
 
 export interface Member {
@@ -59,6 +67,8 @@ export interface Member {
   inv: 'Aceptada' | 'Pendiente' | 'Expirada';
   acc: 'Activa' | 'Suspendida' | '—';
   me?: boolean;
+  /** Puede registrar gastos personales (lo decide el propietario). */
+  personal: boolean;
 }
 
 export interface Notification {

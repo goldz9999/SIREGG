@@ -6,7 +6,7 @@ const gasto = (over: Partial<ApiGasto> = {}): ApiGasto => ({
   id: 12, pedido_id: null, creado_en: '2026-09-28T14:05:00Z', usuario_id: 1, usuario_nombre: 'Lucía Ramírez', empresa_id: 1, es_personal: false,
   descripcion: 'Cemento', monto: '1240.50', fecha: '2026-09-28', confianza: 'alta',
   pendiente_revision: false, posible_duplicado_de: null,
-  categorias: { nombre: 'Materiales' }, proveedores: { nombre: 'Sodimac' }, pedidos: null,
+  categorias: { nombre: 'Materiales' }, proveedores: { nombre: 'Sodimac', ruc: '20100070970' }, pedidos: null,
   comprobantes: [{ id: 1, numero: 'F001-23', tipo: 'factura' }],
   pagos: [{ id: 1, medio: 'yape', numero_operacion: '998877' }],
   evidencias: [{ id: 1, tipo: 'imagen', origen: 'telegram', storage_path: 'a.webp', url: 'https://x/a.webp' }],
@@ -18,7 +18,7 @@ describe('mapGasto', () => {
     const e = mapGasto(gasto());
     expect(e).toMatchObject({
       id: '12', desc: 'Cemento', prov: 'Sodimac', cat: 'Materiales', type: 'Empresarial',
-      amt: 1240.5, st: 'ok', user: 'Lucía Ramírez', pay: 'Yape', op: '998877', dupOf: null, proj: '', conf: 'alta', createdAt: '2026-09-28T14:05:00Z',
+      amt: 1240.5, st: 'ok', user: 'Lucía Ramírez', pay: 'Yape', op: '998877', dupOf: null, proj: '', conf: 'alta', createdAt: '2026-09-28T14:05:00Z', ruc: '20100070970', empresaId: 1,
     });
     expect(e.date.getFullYear()).toBe(2026);
     expect(e.date.getMonth()).toBe(8);
@@ -86,12 +86,12 @@ describe('empresas y roles', () => {
 
 describe('mapMember', () => {
   const u = (over: Partial<ApiUsuarioLista> = {}): ApiUsuarioLista => ({
-    id: 4, nombre: 'Ana Quispe', email: 'ana@x.pe', rol: 'empleado', activo: true, tiene_password: true,
+    id: 4, nombre: 'Ana Quispe', email: 'ana@x.pe', rol: 'empleado', activo: true, tiene_password: true, puede_registrar_personal: false,
     empresas: [{ empresa_id: 7, rol: 'contador' }], ...over,
   });
 
   it('con contraseña y activo: aceptada y activa, con el rol de la empresa pedida', () => {
-    expect(mapMember(u(), 7, 99)).toEqual({ id: 4, name: 'Ana Quispe', email: 'ana@x.pe', role: 'Contador', inv: 'Aceptada', acc: 'Activa', me: false });
+    expect(mapMember(u(), 7, 99)).toEqual({ id: 4, name: 'Ana Quispe', email: 'ana@x.pe', role: 'Contador', inv: 'Aceptada', acc: 'Activa', me: false, personal: false });
   });
   it('sin contraseña: pendiente y sin cuenta', () => {
     expect(mapMember(u({ tiene_password: false }), 7, 99)).toMatchObject({ inv: 'Pendiente', acc: '—' });
@@ -99,11 +99,19 @@ describe('mapMember', () => {
   it('desactivado: aceptada y suspendida', () => {
     expect(mapMember(u({ activo: false }), 7, 99)).toMatchObject({ inv: 'Aceptada', acc: 'Suspendida' });
   });
+  it('lleva el permiso de gastos personales', () => {
+    expect(mapMember(u({ puede_registrar_personal: true }), 7, 99).personal).toBe(true);
+  });
   it('marca al usuario actual', () => {
     expect(mapMember(u(), 7, 4).me).toBe(true);
   });
   it('si no aparece la empresa cae a Empleado, y sin correo usa un id estable', () => {
     const m = mapMember(u({ email: null, nombre: null, empresas: [] }), 7, 99);
     expect(m).toMatchObject({ role: 'Empleado', email: 'usuario-4', name: 'usuario-4' });
+  });
+  it('mapCompany lleva RUC, dirección, moneda y logotipo', () => {
+    const c = mapCompany({ id: 1, nombre: 'Demo', activa: true, logo_url: 'https://x/logo.png', ruc: '20123456789', direccion: 'Av. Lima 1', moneda: 'USD' }, 'propietario');
+    expect(c).toMatchObject({ ruc: '20123456789', address: 'Av. Lima 1', currency: 'USD', logoUrl: 'https://x/logo.png', role: 'Propietario' });
+    expect(mapCompany({ id: 1, nombre: 'Demo', activa: true, logo_url: null }, 'empleado')).toMatchObject({ ruc: '', address: '', currency: 'PEN', logoUrl: null });
   });
 });

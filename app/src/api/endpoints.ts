@@ -1,6 +1,6 @@
 import { api } from './client';
 import type { PatchBody } from './sync';
-import type { ApiCategoria, ApiConteos, ApiEmpresa, ApiGasto, ApiLogin, ApiPedido, ApiProveedor, ApiResumen, ApiUsuario, ApiUsuarioLista, EstadoPedido, RolEmpresa } from './types';
+import type { ApiCategoria, ApiConteos, ApiEmpresa, ApiGasto, ApiLogin, ApiPedido, ApiProveedor, ApiResumen, ApiUsuario, ApiUsuarioLista, EstadoPedido, Moneda, RolEmpresa } from './types';
 
 export const login = (email: string, password: string) =>
   api<ApiLogin>('/auth/login', { method: 'POST', body: { email, password } });
@@ -13,6 +13,12 @@ export const listGastos = (empresaId: number) =>
   api<ApiGasto[]>('/gastos', { query: { empresa_id: empresaId, limite: 200 } });
 export const resumen = (empresaId: number) => api<ApiResumen>('/gastos/resumen', { query: { empresa_id: empresaId } });
 export const conteos = (empresaId: number) => api<ApiConteos>('/gastos/conteos', { query: { empresa_id: empresaId } });
+
+// Espacio "Gastos personales": mis gastos marcados como personales, de todas mis empresas.
+const PERSONAL = { ambito: 'personal' } as const;
+export const listGastosPersonales = () => api<ApiGasto[]>('/gastos', { query: { ...PERSONAL, limite: 200 } });
+export const resumenPersonal = () => api<ApiResumen>('/gastos/resumen', { query: PERSONAL });
+export const conteosPersonal = () => api<ApiConteos>('/gastos/conteos', { query: PERSONAL });
 export const categorias = (empresaId: number) => api<ApiCategoria[]>('/categorias', { query: { empresa_id: empresaId } });
 
 const accion = (id: number, empresaId: number, ruta: string) =>
@@ -24,7 +30,7 @@ export const confirmarDuplicado = (id: number, empresaId: number) => accion(id, 
 export const descartarDuplicado = (id: number, empresaId: number) => accion(id, empresaId, 'descartar-duplicado');
 export const rechazar = (id: number, empresaId: number) => accion(id, empresaId, 'rechazar');
 
-export interface NuevoUsuario { nombre: string; email: string; password: string; rol_empresa: RolEmpresa }
+export interface NuevoUsuario { nombre: string; email: string; password: string; rol_empresa: RolEmpresa; puede_registrar_personal?: boolean }
 export const listUsuarios = (empresaId: number) => api<ApiUsuarioLista[]>('/usuarios', { query: { empresa_id: empresaId } });
 export const crearUsuario = (empresaId: number, u: NuevoUsuario) =>
   api<ApiUsuarioLista>('/usuarios', { method: 'POST', body: { ...u, empresa_ids: [empresaId] }, query: { empresa_id: empresaId } });
@@ -46,8 +52,14 @@ export const renombrarCategoria = (id: number, empresaId: number, nombre: string
 export const eliminarCategoria = (id: number, empresaId: number) =>
   api<unknown>('/categorias/' + id, { method: 'DELETE', query: { empresa_id: empresaId } });
 
-export const actualizarUsuario = (id: number, empresaId: number, body: { rol_empresa?: RolEmpresa; activo?: boolean }) =>
+export const actualizarUsuario = (id: number, empresaId: number, body: { rol_empresa?: RolEmpresa; activo?: boolean; puede_registrar_personal?: boolean }) =>
   api<ApiUsuarioLista>('/usuarios/' + id, { method: 'PATCH', body, query: { empresa_id: empresaId } });
 
-export const renombrarEmpresa = (empresaId: number, nombre: string) =>
-  api<ApiEmpresa>('/empresas/' + empresaId, { method: 'PATCH', body: { nombre }, query: { empresa_id: empresaId } });
+export interface DatosEmpresa { nombre?: string; ruc?: string | null; direccion?: string | null; moneda?: Moneda }
+export const actualizarEmpresa = (empresaId: number, body: DatosEmpresa) =>
+  api<ApiEmpresa>('/empresas/' + empresaId, { method: 'PATCH', body, query: { empresa_id: empresaId } });
+export const subirLogo = (empresaId: number, file: File) => {
+  const form = new FormData();
+  form.append('file', file);
+  return api<ApiEmpresa>('/empresas/' + empresaId + '/logo', { method: 'PATCH', body: form, query: { empresa_id: empresaId } });
+};

@@ -28,13 +28,14 @@ export const PERMS: Record<Role, PageId[]> = {
   Contador: ['dashboard', 'revision', 'gastos', 'comprobantes', 'proveedores', 'proyectos', 'categorias', 'reportes', 'personal'],
   Supervisor: ['dashboard', 'revision', 'gastos', 'comprobantes', 'proveedores', 'proyectos', 'reportes', 'personal'],
   Empleado: ['dashboard', 'revision', 'gastos', 'comprobantes', 'proyectos', 'personal'],
-  Titular: ['dashboard', 'revision', 'gastos', 'comprobantes', 'proveedores', 'categorias', 'reportes', 'personal'],
+  // Espacio "Gastos personales": proveedores, categorías y proyectos son catálogos de cada empresa.
+  Titular: ['dashboard', 'revision', 'gastos', 'comprobantes', 'reportes', 'personal'],
 };
 
 export const ROLES: Role[] = ['Propietario', 'Administrador', 'Supervisor', 'Contador', 'Empleado'];
 
 export const ROLE_DOCS: [Role, string][] = [
-  ['Propietario', 'Control total de la organización: miembros, categorías, proyectos y configuración.'],
+  ['Propietario', 'Control total de la organización: miembros, categorías, proyectos y configuración. Decide quién puede registrar gastos personales.'],
   ['Administrador', 'Gestiona miembros, categorías, proyectos y configuración.'],
   ['Supervisor', 'Revisa gastos y gestiona proyectos y pedidos.'],
   ['Contador', 'Consulta gastos, comprobantes y reportes; gestiona categorías y proveedores.'],

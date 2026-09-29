@@ -44,14 +44,15 @@ export async function api<T>(path: string, opts: Options = {}): Promise<T> {
   const headers: Record<string, string> = {};
   const token = getToken();
   if (token) headers.Authorization = 'Bearer ' + token;
-  if (opts.body !== undefined) headers['Content-Type'] = 'application/json';
+  const isForm = opts.body instanceof FormData;
+  if (opts.body !== undefined && !isForm) headers['Content-Type'] = 'application/json';
 
   let res: Response;
   try {
     res = await fetch(url.toString(), {
       method: opts.method ?? 'GET',
       headers,
-      body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+      body: isForm ? (opts.body as FormData) : opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
     });
   } catch {
     throw new ApiError(0, 'No se pudo conectar con el servidor.');

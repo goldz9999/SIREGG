@@ -12,6 +12,8 @@ export interface SessionUser {
   initials: string;
   esSuperAdmin: boolean;
   lastCompanyId: number | null;
+  /** Puede registrar gastos personales (el propietario siempre; el resto si el propietario lo permite). */
+  canPersonal: boolean;
 }
 
 interface AuthState {
@@ -38,7 +40,7 @@ const writeCached = (u: ApiUsuario | null) => {
 
 const toUser = (u: ApiUsuario): SessionUser => {
   const name = u.nombre || u.email || 'Usuario';
-  return { id: u.id, name, email: u.email || '', initials: initialsOf(name), esSuperAdmin: u.es_super_admin, lastCompanyId: u.ultima_empresa_id };
+  return { id: u.id, name, email: u.email || '', initials: initialsOf(name), esSuperAdmin: u.es_super_admin, lastCompanyId: u.ultima_empresa_id, canPersonal: !!u.puede_registrar_personal };
 };
 
 async function loadCompanies(u: ApiUsuario): Promise<Company[]> {
