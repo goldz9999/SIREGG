@@ -19,9 +19,18 @@ npm run build      # typecheck + build de producción en dist/
 | `src/pages/` | Una pantalla por ruta: `/dashboard`, `/revision`, `/gastos`, `/gastos/:id`, `/comprobantes`, `/proveedores`, `/proyectos`, `/categorias`, `/reportes`, `/usuarios`, `/empresa`, `/personal`. |
 | `src/styles/` | `base.css` (componentes base heredados de Broadsheet), `theme.css` (tokens claro/oscuro de v3), `app.css` (layout y patrones). |
 
-## Conectar el backend
+## Backend
 
-- Los gastos salen de `generateExpenses()` en `src/data/expenses.ts` y se leen en `AppState` (`expenses`). Sustituye esa fuente por tu API; las pantallas solo consumen `useApp().expenses`.
-- Las acciones (confirmar, descartar, asignar proyecto, invitar, etc.) llaman a `patchExpense` / `setEdits`, que hoy solo guardan en memoria. Ahí van las mutaciones reales.
-- Los permisos por rol (`PERMS` en `src/data/org.ts`) solo ocultan navegación. El aislamiento entre empresas y los permisos deben validarse en el backend.
-- Tema, empresa y pantalla se recuerdan en `localStorage` (`siregg-ui`).
+El frontend consume la API de `facturas-app/backend` (NestJS + Supabase). Crea `app/.env` con la URL del backend (por defecto `http://localhost:3000`):
+
+```
+VITE_API_URL=http://localhost:3000
+```
+
+- **Conectado:** login, selector de empresa, Dashboard, Gastos (lista y detalle), Revisión y creación/lista de miembros en Usuarios. Ver `src/api/` (cliente, mappers, planificador de sincronización y endpoints), `src/state/Auth.tsx` y `src/state/AppState.tsx`.
+- **Sigue como demostración:** proveedores, categorías, configuración de empresa, proyectos/pedidos, reportes y notificaciones (`src/data/`), y en Usuarios cambiar rol, suspender y reenviar.
+- Proyecto, proveedor, RUC y medio de pago de un gasto se editan solo en pantalla: el backend aún no tiene endpoint para ellos.
+- El espacio "Gastos personales" está oculto: el backend modela lo personal como un flag por gasto, no como una empresa.
+- Los permisos por rol (`PERMS` en `src/data/org.ts`) solo ocultan navegación; el backend valida el acceso por empresa con el rol de `usuario_empresas.rol`.
+- La sesión (token) vive en `localStorage` (`siregg-token`, `siregg-session`); tema, empresa y pantalla en `siregg-ui`.
+- `npm test` corre los tests de `src/api` y `src/data`.
