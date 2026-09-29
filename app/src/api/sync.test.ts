@@ -55,4 +55,7 @@ describe('planSync', () => {
     expect(planSync(base, { st: 'ok', pay: 'Efectivo' }, cats, peds)).toEqual({ kind: 'patch', body: { medio_pago: 'efectivo' } });
     expect(planSync({ ...base, st: 'ok' }, { prov: 'Cabify', ruc: '', pay: 'Yape' }, cats, peds)).toEqual({ kind: 'none' });
   });
+  it('restaurar un duplicado ya descartado quita la marca (descartar-duplicado)', () => {
+    expect(planSync({ ...base, st: 'desc', dupOf: '1' }, { st: 'ok', dupOf: null }, cats, peds)).toEqual({ kind: 'descartarDuplicado' });
+  });
 });

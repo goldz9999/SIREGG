@@ -28,7 +28,7 @@ const bannerFor = (e: Expense): Banner | undefined => ({
   info: ['ph-warning-circle', 'Requiere información', 'Falta el RUC del proveedor para registrar este gasto empresarial.', 'var(--color-accent-2-100)', 'var(--color-accent-2)'],
   dup: ['ph-copy', 'Posible duplicado', 'Parece repetir el gasto ' + (e.dupOf || 'registrado antes') + '. Decide si conservar ambos.', 'var(--color-accent-2-100)', 'var(--color-accent-2)'],
   err: ['ph-x-circle', 'Error de procesamiento', 'No se pudo leer el comprobante. Reintenta, pide otra foto por Telegram o completa los datos.', 'var(--color-accent-2-100)', 'var(--color-accent-2)'],
-  desc: ['ph-trash', 'Duplicado confirmado', 'Marcado como duplicado. No se incluye en totales.', 'var(--color-neutral-100)', 'var(--color-neutral-700)'],
+  desc: ['ph-trash', 'Duplicado confirmado', 'Marcado como duplicado' + (e.dupOf ? ' del gasto ' + e.dupOf : '') + '. No se incluye en totales. Si no lo era, restáuralo.', 'var(--color-neutral-100)', 'var(--color-neutral-700)'],
 } as Partial<Record<Status, Banner>>)[e.st];
 
 /**
@@ -115,6 +115,10 @@ export default function ExpenseDetail({ expense: base, done, onDone, onResolved,
   ];
   else if (isErr) actions = [act('Reintentar lectura', 'ph-arrow-clockwise', 'btn btn-primary', () => patchExpense(e.id, { st: 'proc' })), act('Completar manualmente', 'ph-pencil-simple', 'btn btn-secondary', startEdit)];
   else if (e.st === 'ok') actions = [act('Editar', 'ph-pencil-simple', 'btn btn-secondary', startEdit)];
+  else if (e.st === 'desc') actions = [act('No era duplicado', 'ph-arrow-counter-clockwise', 'btn btn-secondary', () => {
+    patchExpense(e.id, { st: 'ok', dupOf: null }); onResolved();
+    showToast('Gasto ' + e.id + ' restaurado: vuelve a sumar en los totales.', 'ph-check-circle');
+  })];
   if (e.ev.length && !draft) actions.push(act('Ver comprobantes', 'ph-files', 'btn btn-ghost', () => setPreview(0)));
   if (primaryRef) primaryRef.current = actions.length ? actions[0].run : null;
 
@@ -188,7 +192,7 @@ export default function ExpenseDetail({ expense: base, done, onDone, onResolved,
         </div>
       </section>
 
-      {e.st === 'dup' && orig && (
+      {(e.st === 'dup' || e.st === 'desc') && orig && (
         <div data-a="1" className="panel" style={{ gap: 12 }}>
           <h3 className="panel-title">Comparación con el gasto existente</h3>
           <span className="muted" style={{ fontSize: 13 }}>Compara las imágenes: toca una para verla en grande.</span>

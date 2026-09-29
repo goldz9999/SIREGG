@@ -23,6 +23,12 @@ export const listGastos = (empresaId: number) =>
 export const resumen = (empresaId: number) => api<ApiResumen>('/gastos/resumen', { query: { empresa_id: empresaId } });
 export const conteos = (empresaId: number) => api<ApiConteos>('/gastos/conteos', { query: { empresa_id: empresaId } });
 
+// Duplicados ya confirmados ("Descartar este gasto"): el listado normal no los trae.
+export const listDuplicados = (empresaId: number) =>
+  api<ApiGasto[]>('/gastos', { query: { empresa_id: empresaId, duplicado_confirmado: true, limite: 200 } });
+export const listDuplicadosPersonales = () =>
+  api<ApiGasto[]>('/gastos', { query: { ambito: 'personal', duplicado_confirmado: true, limite: 200 } });
+
 // Espacio "Gastos personales": mis gastos marcados como personales, de todas mis empresas.
 const PERSONAL = { ambito: 'personal' } as const;
 export const listGastosPersonales = () => api<ApiGasto[]>('/gastos', { query: { ...PERSONAL, limite: 200 } });

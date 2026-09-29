@@ -30,6 +30,8 @@ interface AppState {
   /** Cambia de empresa; devuelve la página a la que ir (dashboard si el rol no puede ver `page`). */
   switchCompany: (id: string, page: PageId) => PageId;
   expenses: Expense[];
+  /** Duplicados ya descartados: no suman en totales ni salen en "Todos". */
+  duplicados: Expense[];
   pendingCount: number;
   resumen: ApiResumen | null;
   counts: ApiConteos | null;
@@ -74,6 +76,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<Toast | null>(null);
   const [gastos, setGastos] = useState<Expense[]>([]);
+  const [dupsBase, setDupsBase] = useState<Expense[]>([]);
   // Cambios pendientes de confirmar por el servidor (optimista); se limpia en cada recarga.
   const [overlay, setOverlay] = useState<Record<string, Partial<Expense>>>({});
   const [resumen, setResumen] = useState<ApiResumen | null>(null);
@@ -130,15 +133,18 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         endpoints.listGastosPersonales(), endpoints.conteosPersonal(), endpoints.resumenPersonal(),
         Promise.all(empresaIds.map((id) => endpoints.categorias(id))).then((l) => l.flat()),
         Promise.resolve([] as ApiPedido[]), Promise.resolve([] as ApiProveedor[]),
+        endpoints.listDuplicadosPersonales().catch(() => []),
       ] as const)
       : Promise.all([
         endpoints.listGastos(empresaId), endpoints.conteos(empresaId), endpoints.resumen(empresaId),
         endpoints.categorias(empresaId), endpoints.listPedidos(empresaId), endpoints.listProveedores(empresaId),
+        endpoints.listDuplicados(empresaId).catch(() => []),
       ] as const);
     load
-      .then(([g, c, r, cats, peds, provs]) => {
+      .then(([g, c, r, cats, peds, provs, dups]) => {
         if (!alive) return;
         setGastos(g.map(mapGasto));
+        setDupsBase(dups.map(mapGasto));
         setCounts(c);
         setResumen(r);
         setCategories(cats);
@@ -148,7 +154,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       })
       .catch((e) => {
         if (!alive) return;
-        setGastos([]); setCounts(null); setResumen(null); setCategories([]); setPedidos([]); setProveedores([]);
+        setGastos([]); setDupsBase([]); setCounts(null); setResumen(null); setCategories([]); setPedidos([]); setProveedores([]);
         showToast(e instanceof Error ? e.message : 'No se pudieron cargar los datos.', 'ph-warning-circle');
       })
       .finally(() => { if (alive) setLoading(false); });
@@ -198,7 +204,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     if (id === coId) return target;
     setCoId(id);
     setLastPage(target);
-    setGastos([]); setCounts(null); setResumen(null); setCategories([]); setPedidos([]); setProveedores([]);
+    setGastos([]); setDupsBase([]); setCounts(null); setResumen(null); setCategories([]); setPedidos([]); setProveedores([]);
     if (id !== PERSONAL_ID) endpoints.setEmpresaActiva(Number(id)).catch(() => { /* solo recuerda la preferencia */ });
     showToast('Ahora en ' + next.name, 'ph-arrows-left-right');
     return target;
@@ -208,8 +214,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     () => gastos.map((e) => ({ ...e, ...(overlay[e.id] || {}) })),
     [gastos, overlay],
   );
+  const duplicados = useMemo(
+    () => dupsBase.map((e) => ({ ...e, ...(overlay[e.id] || {}) })),
+    [dupsBase, overlay],
+  );
   const expensesRef = useRef<Expense[]>([]);
-  expensesRef.current = expenses;
+  expensesRef.current = [...expenses, ...duplicados];
   const pendingCount = useMemo(() => expenses.filter((e) => isPending(e.st)).length, [expenses]);
 
   const patchExpense = useCallback((id: string, p: Partial<Expense>) => {
@@ -247,7 +257,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const value: AppState = {
     theme, dark, setTheme: setThemeState, user, logout: auth.logout, companies, co, personal, allowed, loading, switchCompany,
-    expenses, pendingCount, resumen, counts, categories, pedidos, proveedores, patchExpense, reload,
+    expenses, duplicados, pendingCount, resumen, counts, categories, pedidos, proveedores, patchExpense, reload,
     toast, showToast, hideToast: () => setToast(null),
     lastPage, rememberPage: setLastPage,
   };

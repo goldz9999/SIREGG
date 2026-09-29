@@ -14,11 +14,11 @@ const EMPTY_FILTERS = { st: '', cat: '', type: '', pay: '' };
 const PER_PAGE = 10;
 
 export default function Gastos() {
-  const { expenses } = useApp();
+  const { expenses, duplicados } = useApp();
   const navigate = useNavigate();
   const detailId = useMatch('/gastos/:id')?.params.id;
   const [doneId, setDoneId] = useState<string | null>(null);
-  const e = detailId ? expenses.find((x) => x.id === detailId) : undefined;
+  const e = detailId ? expenses.find((x) => x.id === detailId) ?? duplicados.find((x) => x.id === detailId) : undefined;
 
   // The list stays mounted under the detail so its search, filters and page survive "Volver".
   return (
@@ -34,13 +34,15 @@ export default function Gastos() {
 
 function GastosList() {
   const app = useApp();
-  const { expenses, pendingCount } = app;
+  const { expenses, duplicados, pendingCount } = app;
+  // Duplicados: los posibles (por revisar) y los ya descartados (no suman en totales).
+  const dupRows = useMemo(() => [...expenses.filter((e) => e.st === 'dup'), ...duplicados], [expenses, duplicados]);
   const navigate = useNavigate();
   const { isMobile } = useViewport();
   const [params, setParams] = useSearchParams();
   const [q, setQ] = useState(params.get('q') || '');
   const [f, setF] = useState(EMPTY_FILTERS);
-  const [tab, setTab] = useState<'all' | 'rev'>('all');
+  const [tab, setTab] = useState<'all' | 'rev' | 'dup'>('all');
   const [sort, setSort] = useState<{ k: SortKey; dir: number }>({ k: 'date', dir: -1 });
   const [page, setPage] = useState(0);
 
@@ -55,8 +57,9 @@ function GastosList() {
 
   const rows = useMemo(() => {
     const qq = q.trim().toLowerCase();
-    const r = expenses.filter((e) =>
-      (tab === 'all' || isPending(e.st)) &&
+    const base = tab === 'dup' ? dupRows : expenses;
+    const r = base.filter((e) =>
+      (tab !== 'rev' || isPending(e.st)) &&
       (!qq || (e.desc + ' ' + e.prov + ' ' + e.ruc + ' ' + e.id).toLowerCase().includes(qq)) &&
       (!f.st || e.st === f.st) && (!f.cat || e.cat === f.cat) && (!f.type || e.type === f.type) && (!f.pay || e.pay === f.pay));
     const { k, dir } = sort;
@@ -64,7 +67,7 @@ function GastosList() {
       const x = k === 'amt' ? a.amt - b.amt : k === 'prov' ? a.prov.localeCompare(b.prov) : +a.date - +b.date || +b.id - +a.id;
       return x * dir;
     });
-  }, [expenses, q, f, tab, sort]);
+  }, [expenses, dupRows, q, f, tab, sort]);
 
   const pages = Math.max(1, Math.ceil(rows.length / PER_PAGE));
   const pg = Math.min(page, pages - 1);
@@ -90,10 +93,19 @@ function GastosList() {
     <div className="stack" style={{ gap: 'var(--space-4)' }}>
       <div className="row wrap" style={{ gap: 'var(--space-2)' }}>
         <Seg name="gtab" value={tab} onChange={(v) => { setTab(v); setPage(0); }}
-          options={[{ value: 'all', label: 'Todos (' + expenses.length + ')' }, { value: 'rev', label: 'Por revisar (' + pendingCount + ')' }]} />
+          options={[
+            { value: 'all', label: 'Todos (' + expenses.length + ')' },
+            { value: 'rev', label: 'Por revisar (' + pendingCount + ')' },
+            { value: 'dup', label: 'Duplicados (' + dupRows.length + ')' },
+          ]} />
         <span className="grow" />
         <button className="btn btn-primary" onClick={() => showRegisterInfo(app.showToast)}><Icon n="ph-plus-circle" /> Registrar gasto</button>
       </div>
+      {tab === 'dup' && (
+        <span className="muted" style={{ fontSize: 13 }}>
+          Posibles duplicados por revisar y los que ya marcaste como duplicado. Los descartados no suman en los totales; ábrelos para comparar las fotos o restaurarlos.
+        </span>
+      )}
       <div className="row wrap" style={{ gap: 'var(--space-2)' }}>
         <SearchInput value={q} onChange={(v) => { setQ(v); setPage(0); }} placeholder="Buscar descripción, proveedor, RUC…" style={{ flex: '1 1 240px', maxWidth: 360 }} />
         {filters.map((x) => (

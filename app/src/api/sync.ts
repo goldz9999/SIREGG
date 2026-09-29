@@ -64,6 +64,8 @@ export function planSync(
 
   if (cur.st === 'dup' && p.st === 'ok') return hasBody ? { kind: 'descartarDuplicado', body } : { kind: 'descartarDuplicado' };
   if (cur.st === 'dup' && p.st === 'desc') return hasBody ? { kind: 'confirmarDuplicado', body } : { kind: 'confirmarDuplicado' };
+  // "No era duplicado" sobre uno ya descartado: se quita la marca y vuelve a sumar.
+  if (cur.st === 'desc' && p.st === 'ok') return hasBody ? { kind: 'descartarDuplicado', body } : { kind: 'descartarDuplicado' };
 
   if (hasBody) return { kind: 'patch', body };
   if (cur.st === 'pend' && p.st === 'ok') return { kind: 'confirmarConfianza' };
