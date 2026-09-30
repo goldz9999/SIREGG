@@ -6,7 +6,7 @@ Panel de gestión de gastos de SIREGG (React + Vite + TypeScript). Consume la AP
 | Carpeta / archivo | Contenido |
 | --- | --- |
 | `app/` | Código del panel. Ver [`app/README.md`](app/README.md). |
-| `docker-compose.yml` | Levanta panel y backend en el VPS (requiere `../facturas-app` al lado). |
+| `docker-compose.yml` | Levanta panel y backend en el VPS detrás de Traefik (red `proxy-net`; requiere `../facturas-app` al lado). |
 | `.env.example` | Variables del despliegue (copiar como `.env`, nunca se sube a Git). |
 
 ## Desarrollo
