@@ -18,7 +18,7 @@ import Reportes from './pages/Reportes';
 import Revision from './pages/Revision';
 import Telegram from './pages/Telegram';
 import Usuarios from './pages/Usuarios';
-import { AppStateProvider, useApp } from './state/AppState';
+import { AppStateProvider, aplicarTemaInicial, useApp } from './state/AppState';
 import { AuthProvider, useAuth } from './state/Auth';
 
 function Home() {
@@ -58,6 +58,8 @@ function Gate() {
     </AppStateProvider>
   );
 }
+
+aplicarTemaInicial();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
