@@ -1,0 +1,52 @@
+# Despliegue de SIREGG en un servidor (Hetzner) con un solo dominio:
+#   https://DOMINIO/       -> panel (frontend)
+#   https://DOMINIO/api/   -> backend (API, WebSocket y webhook de Telegram)
+# Caddy saca y renueva el certificado HTTPS solo.
+#
+# Requiere los dos repos clonados uno al lado del otro:
+#   ~/siregg/SIREGG         (este repo; aquí está este archivo)
+#   ~/siregg/facturas-app   (backend)
+# Uso: cd ~/siregg/SIREGG/deploy && docker compose up -d --build
+name: siregg
+
+services:
+  backend:
+    build: ../../facturas-app/backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      PORT: 3000
+      FRONTEND_URL: https://${DOMINIO:?Define DOMINIO en .env}
+    mem_limit: 768m
+
+  frontend:
+    build:
+      context: ../app
+      args:
+        # Se incrusta al compilar: el panel llama a https://DOMINIO/api
+        VITE_API_URL: https://${DOMINIO:?Define DOMINIO en .env}/api
+    restart: unless-stopped
+    environment:
+      PORT: 8080
+    mem_limit: 128m
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - backend
+      - frontend
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMINIO: ${DOMINIO:?Define DOMINIO en .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data     # certificados: no borrar
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

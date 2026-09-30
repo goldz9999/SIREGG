@@ -19,6 +19,11 @@ npm run build      # typecheck + build de producción en dist/
 | `src/pages/` | Una pantalla por ruta: `/dashboard`, `/revision`, `/gastos`, `/gastos/:id`, `/comprobantes`, `/proveedores`, `/proyectos`, `/categorias`, `/reportes`, `/usuarios`, `/empresa`, `/personal`. |
 | `src/styles/` | `base.css` (componentes base heredados de Broadsheet), `theme.css` (tokens claro/oscuro de v3), `app.css` (layout y patrones). |
 
+## Despliegue en un servidor propio (Hetzner)
+
+Ver [`deploy/README.md`](../deploy/README.md): un solo dominio (`sisreg.sublitex.pe`) con Caddy y HTTPS
+automático; el panel en `/` y el backend en `/api`. Se levanta con `docker compose up -d --build`.
+
 ## Despliegue en Railway (Docker)
 
 Dos servicios en el mismo proyecto de Railway, cada uno con su Dockerfile y su `railway.json`
