@@ -7,13 +7,13 @@
 #
 # Requiere el repo del backend al lado de este:
 #   ~/app_despliegue/SIREGG        (este repo)
-#   ~/app_despliegue/facturas-app  (backend)
+#   ~/app_despliegue/facturas-app  (backend, código en la raíz del repo)
 # Desplegar: git pull (en ambos) && docker compose up -d --build
 name: siregg
 
 services:
   backend:
-    build: ../facturas-app/backend
+    build: ../facturas-app
     restart: unless-stopped
     env_file: .env
     environment:

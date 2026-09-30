@@ -31,7 +31,7 @@ Dos servicios en el mismo proyecto de Railway, cada uno con su Dockerfile y su `
 
 | Servicio | Repo | Root Directory | Config file path | Variables |
 | --- | --- | --- | --- | --- |
-| backend | `facturas-app` | `/backend` | `/backend/railway.json` | `SUPABASE_URL`, `SUPABASE_KEY` (service_role), `JWT_SECRET`, `FRONTEND_URL` (URL pública del frontend), `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `GEMINI_API_KEY`, `GEMINI_MODEL` |
+| backend | `facturas-app` | `/` (vacío) | `/railway.json` | `SUPABASE_URL`, `SUPABASE_KEY` (service_role), `JWT_SECRET`, `FRONTEND_URL` (URL pública del frontend), `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `GEMINI_API_KEY`, `GEMINI_MODEL` |
 | frontend | `SIREGG` | `/app` | `/app/railway.json` | `VITE_API_URL` (URL pública del backend, `https://…`) |
 
 1. En cada servicio: *Settings → Source*: Root Directory; *Settings → Config-as-code*: la ruta del `railway.json`.
@@ -51,22 +51,22 @@ En local: `docker build --build-arg VITE_API_URL=http://localhost:3000 -t siregg
 
 La base del proyecto Supabase **SIREGG** (`bqcfsgdlhzjstzbfbner`) ya tiene aplicadas
 `0001_esquema_base.sql` a `0006_permiso_telegram.sql` de
-`facturas-app/backend/supabase/migrations/`, el bucket privado `Facturas` y los públicos `logos-empresas` y `avatares`.
+`facturas-app/supabase/migrations/`, el bucket privado `Facturas` y los públicos `logos-empresas` y `avatares`.
 
-1. En `facturas-app/backend/.env` (copia de `.env.example`):
+1. En `facturas-app/.env` (copia de `.env.example`):
    ```
    SUPABASE_URL=https://bqcfsgdlhzjstzbfbner.supabase.co
    SUPABASE_KEY=<service_role key de SIREGG: Project Settings → API Keys>
    JWT_SECRET=<openssl rand -hex 48>
    ```
    Debe ser la **service_role** key: las tablas tienen RLS sin políticas y la anon key no ve nada.
-2. `cd facturas-app/backend && npm install && npm run start:dev` (puerto 3000).
+2. `cd facturas-app && npm install && npm run start:dev` (puerto 3000).
 3. `cd SIREGG/app && echo VITE_API_URL=http://localhost:3000 > .env && npm install && npm run dev`.
 4. Entra con un usuario de `public.usuarios` que tenga `password_hash` y filas en
    `usuario_empresas` (para una base vacía, `supabase/seed-inicial.sql` crea el primero).
 
 
-El frontend consume la API de `facturas-app/backend` (NestJS + Supabase). Crea `app/.env` con la URL del backend (por defecto `http://localhost:3000`):
+El frontend consume la API de `facturas-app` (NestJS + Supabase). Crea `app/.env` con la URL del backend (por defecto `http://localhost:3000`):
 
 ```
 VITE_API_URL=http://localhost:3000

@@ -15,7 +15,7 @@ SIREGG son dos piezas, cada una en su repositorio:
 
 | Pieza | Repositorio | Contenedor | Puerto local |
 | --- | --- | --- | --- |
-| Backend (API NestJS + bot de Telegram) | `goldz9999/facturas-app` (carpeta `backend/`) | `backend` | `127.0.0.1:3100` |
+| Backend (API NestJS + bot de Telegram) | `goldz9999/facturas-app` | `backend` | `127.0.0.1:3100` |
 | Panel web (React) | `goldz9999/SIREGG` (carpeta `app/`) | `frontend` | `127.0.0.1:3101` |
 
 Nginx las publica en un solo dominio:
@@ -25,7 +25,7 @@ https://sisreg.sublitex.pe/        →  127.0.0.1:3101  (panel)
 https://sisreg.sublitex.pe/api/…   →  127.0.0.1:3100  (backend; Nginx quita el prefijo /api)
 ```
 
-El `docker-compose.yml` que levanta las dos piezas está en la **raíz del repo SIREGG** y construye el backend desde la carpeta vecina `../facturas-app/backend`. Por eso **los dos repos tienen que estar clonados uno al lado del otro.**
+El `docker-compose.yml` que levanta las dos piezas está en la **raíz del repo SIREGG** y construye el backend desde la carpeta vecina `../facturas-app`. Por eso **los dos repos tienen que estar clonados uno al lado del otro.**
 
 La base de datos está en **Supabase** (proyecto `SIREGG`), fuera del VPS. No hay base de datos en el servidor.
 
@@ -94,14 +94,14 @@ Debe mostrar una tabla (aunque sea con contenedores de otros proyectos), sin err
 
 ```bash
 mkdir -p ~/app_despliegue && cd ~/app_despliegue
-git clone -b claude/vibrant-cray-sl4nla git@github.com:goldz9999/SIREGG.git
-git clone -b claude/vibrant-cray-sl4nla git@github.com:goldz9999/facturas-app.git
+git clone -b main git@github.com:goldz9999/SIREGG.git
+git clone -b main git@github.com:goldz9999/facturas-app.git
 ls
 ```
 
 **Comprobar:** `ls` debe mostrar `SIREGG` y `facturas-app` **en la misma carpeta**.
 
-> **Rama:** por ahora los cambios están en la rama `claude/vibrant-cray-sl4nla`. Cuando se mezclen los PR a `main`, cambia ambos repos con `git checkout main && git pull`.
+> **Rama:** se despliega siempre `main`.
 
 > **Si `git clone` da `Permission denied (publickey)`:** la clave de despliegue global del VPS no tiene acceso a estos repos (son de la cuenta `goldz9999`, no de la organización). Pídele a Adrian que la agregue en GitHub, en **cada** repo: Settings → Deploy keys → Add deploy key (solo lectura), con la clave pública del VPS (`/etc/ssh/github_deploy_key.pub`, la puede leer un administrador).
 
@@ -288,9 +288,9 @@ git checkout <commit-bueno>
 cd ~/app_despliegue/SIREGG && docker compose up -d --build
 ```
 
-Cuando se corrija, vuelve a la rama con `git checkout claude/vibrant-cray-sl4nla && git pull` (o `main`) en ambos repos y despliega de nuevo.
+Cuando se corrija, vuelve a `main` con `git checkout main && git pull` en ambos repos y despliega de nuevo.
 
-> Las migraciones de la base de datos (carpeta `facturas-app/backend/supabase/migrations/`) ya están aplicadas en Supabase y no se revierten con el rollback de código.
+> Las migraciones de la base de datos (carpeta `facturas-app/supabase/migrations/`) ya están aplicadas en Supabase y no se revierten con el rollback de código.
 
 ---
 
@@ -314,7 +314,7 @@ Cuando se corrija, vuelve a la rama con `git checkout claude/vibrant-cray-sl4nla
 ## 13. Reglas
 
 - **Nunca** `docker compose down -v` (borra volúmenes).
-- **No** uses el `docker-compose.yml` que está dentro de `facturas-app/backend/`: el de la raíz de SIREGG ya levanta el backend, y usar los dos choca (mismo nombre de proyecto y puerto).
+- **No** uses el `docker-compose.yml` que está en `facturas-app/`: el de la raíz de SIREGG ya levanta el backend, y usar los dos choca (mismo nombre de proyecto y puerto).
 - **Nunca** subas el `.env` a Git ni compartas su contenido.
 - Todo despliegue termina revisando `docker compose ps` y los logs.
 

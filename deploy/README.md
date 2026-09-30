@@ -25,12 +25,11 @@ Comprueba: `ping sisreg.sublitex.pe` debe responder esa IP.
 ```bash
 ssh siregg@178.156.246.18
 mkdir -p ~/app_despliegue && cd ~/app_despliegue
-git clone -b claude/vibrant-cray-sl4nla git@github.com:goldz9999/SIREGG.git
-git clone -b claude/vibrant-cray-sl4nla git@github.com:goldz9999/facturas-app.git
+git clone -b main git@github.com:goldz9999/SIREGG.git
+git clone -b main git@github.com:goldz9999/facturas-app.git
 ```
 
 Los dos repos deben quedar uno al lado del otro (`~/app_despliegue/SIREGG` y `~/app_despliegue/facturas-app`).
-Cuando los PR se mezclen, cambia a `main` (`git checkout main` en ambos).
 
 > Si `git clone` pide contraseña o da *Permission denied*, la clave de despliegue global del VPS aún no tiene acceso a los repos de `goldz9999`: agrégala como *Deploy key* en cada repo de GitHub (Settings → Deploy keys).
 
@@ -94,7 +93,7 @@ Nginx no se toca: los contenedores se reemplazan en los mismos puertos.
 - Solo cambió el panel: `docker compose up -d --build frontend`.
 - Solo cambió el backend: `docker compose up -d --build backend`.
 - **Nunca** `docker compose down -v`.
-- No uses el `docker-compose.yml` de `facturas-app/backend`: este de la raíz de SIREGG ya levanta el backend (mismo nombre de proyecto y puerto).
+- No uses el `docker-compose.yml` de `facturas-app`: este de la raíz de SIREGG ya levanta el backend (mismo nombre de proyecto y puerto).
 
 ## Problemas frecuentes
 
