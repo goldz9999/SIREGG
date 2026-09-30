@@ -21,7 +21,7 @@ npm run build      # typecheck + build de producción en dist/
 
 ## Despliegue en un servidor propio (Hetzner)
 
-Ver [`deploy/README.md`](../deploy/README.md): Nginx del host con `sisreg.sublitex.pe` (panel en `/`, backend en `/api`)
+Guía paso a paso para quien despliega: [`deploy/GUIA-DESPLIEGUE.md`](../deploy/GUIA-DESPLIEGUE.md). Resumen: [`deploy/README.md`](../deploy/README.md): Nginx del host con `sisreg.sublitex.pe` (panel en `/`, backend en `/api`)
 y los contenedores en `127.0.0.1:3100/3101`. Desde la raíz del repo: `docker compose up -d --build`.
 
 ## Despliegue en Railway (Docker)
