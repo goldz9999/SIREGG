@@ -59,6 +59,14 @@ function readStored(): { theme?: ThemePref; coId?: string; page?: PageId } {
   }
 }
 
+/** Pone el tema guardado en <html> antes del primer render: el login también usa las variables del tema. */
+export function aplicarTemaInicial() {
+  const theme = readStored().theme || 'light';
+  const dark = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.classList.toggle('theme-dark', dark);
+  document.documentElement.classList.toggle('theme-light', !dark);
+}
+
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const auth = useAuth();
   const user = auth.user!;
