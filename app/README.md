@@ -1,6 +1,6 @@
 # SIREGG — frontend (v3)
 
-Implementación en React + Vite + TypeScript del diseño `project/SIREGG v3.dc.html`
+Implementación en React + Vite + TypeScript del diseño SIREGG v3
 (dirección "fintech moderno": Geist, vidrio, degradados cian/violeta, temas claro y oscuro).
 
 ```bash
@@ -21,7 +21,7 @@ npm run build      # typecheck + build de producción en dist/
 
 ## Despliegue en un servidor propio (Hetzner)
 
-Guía paso a paso para quien despliega: [`deploy/GUIA-DESPLIEGUE.md`](../deploy/GUIA-DESPLIEGUE.md). Resumen: [`deploy/README.md`](../deploy/README.md): Nginx del host con `sisreg.sublitex.pe` (panel en `/`, backend en `/api`)
+Nginx del host con `sisreg.sublitex.pe` (panel en `/`, backend en `/api`)
 y los contenedores en `127.0.0.1:3100/3101`. Desde la raíz del repo: `docker compose up -d --build`.
 
 ## Despliegue en Railway (Docker)
