@@ -21,8 +21,8 @@ npm run build      # typecheck + build de producción en dist/
 
 ## Despliegue en un servidor propio (Hetzner)
 
-Ver [`deploy/README.md`](../deploy/README.md): un solo dominio (`sisreg.sublitex.pe`) con Caddy y HTTPS
-automático; el panel en `/` y el backend en `/api`. Se levanta con `docker compose up -d --build`.
+Ver [`deploy/README.md`](../deploy/README.md): Nginx del host con `sisreg.sublitex.pe` (panel en `/`, backend en `/api`)
+y los contenedores en `127.0.0.1:3100/3101`. Desde la raíz del repo: `docker compose up -d --build`.
 
 ## Despliegue en Railway (Docker)
 

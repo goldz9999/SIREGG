@@ -1,88 +1,109 @@
-# Despliegue en Hetzner — sisreg.sublitex.pe
+# Despliegue en el VPS — sisreg.sublitex.pe
 
-Un solo dominio con HTTPS automático:
+Sigue el esquema del servidor de producción (`178.156.246.18`):
 
-| URL | Va a |
-| --- | --- |
-| `https://sisreg.sublitex.pe/` | Panel (frontend) |
-| `https://sisreg.sublitex.pe/api/…` | Backend: API, tiempo real (`/api/socket.io`) y webhook de Telegram |
+- **Nginx en el host** recibe `sisreg.sublitex.pe` (80/443 + SSL) y reenvía a puertos locales.
+- **Docker**: SIREGG corre en dos contenedores publicados solo en `127.0.0.1`.
+- **Usuario Linux** del proyecto: `siregg`, con carpeta `~/app_despliegue/`.
 
-Tres contenedores: `backend` (NestJS), `frontend` (panel servido con Caddy) y `caddy` (entrada pública, certificado Let's Encrypt).
-
-## 1. DNS (una sola vez)
-
-En el panel DNS de `sublitex.pe`, crea un registro:
-
-| Tipo | Nombre | Valor |
+| URL pública | Nginx reenvía a | Contenedor |
 | --- | --- | --- |
-| A | `sisreg` | IPv4 del servidor Hetzner |
+| `https://sisreg.sublitex.pe/` | `127.0.0.1:3101` | `frontend` (panel) |
+| `https://sisreg.sublitex.pe/api/…` | `127.0.0.1:3100` (sin `/api`) | `backend` (API, tiempo real en `/api/socket.io`, webhook de Telegram) |
 
-(Opcional `AAAA` con la IPv6.) Comprueba con `ping sisreg.sublitex.pe` que responde la IP del servidor antes del paso 4: Caddy necesita que el dominio ya apunte al servidor para sacar el certificado.
+---
 
-## 2. Servidor (una sola vez)
+## Primera vez (instalación)
 
-Ubuntu/Debian en Hetzner:
+### 1. DNS
+
+En el DNS de `sublitex.pe`, un registro **A**: nombre `sisreg` → `178.156.246.18`.
+Comprueba: `ping sisreg.sublitex.pe` debe responder esa IP.
+
+### 2. Código (usuario `siregg`)
 
 ```bash
-# Docker + compose
-curl -fsSL https://get.docker.com | sh
-sudo usermod -aG docker $USER   # luego cierra sesión y vuelve a entrar
-
-# Firewall: SSH, HTTP y HTTPS
-sudo ufw allow OpenSSH && sudo ufw allow 80 && sudo ufw allow 443 && sudo ufw enable
+ssh siregg@178.156.246.18
+mkdir -p ~/app_despliegue && cd ~/app_despliegue
+git clone -b claude/vibrant-cray-sl4nla git@github.com:goldz9999/SIREGG.git
+git clone -b claude/vibrant-cray-sl4nla git@github.com:goldz9999/facturas-app.git
 ```
 
-Si usas el **Firewall de Hetzner Cloud** (consola web), abre también 80 y 443 (TCP; 443 UDP opcional).
+Los dos repos deben quedar uno al lado del otro (`~/app_despliegue/SIREGG` y `~/app_despliegue/facturas-app`).
+Cuando los PR se mezclen, cambia a `main` (`git checkout main` en ambos).
 
-## 3. Código
+> Si `git clone` pide contraseña o da *Permission denied*, la clave de despliegue global del VPS aún no tiene acceso a los repos de `goldz9999`: agrégala como *Deploy key* en cada repo de GitHub (Settings → Deploy keys).
 
-Los dos repos, uno al lado del otro, en la rama con los cambios:
+### 3. Puertos libres
 
 ```bash
-mkdir -p ~/siregg && cd ~/siregg
-git clone -b claude/vibrant-cray-sl4nla https://github.com/goldz9999/SIREGG.git
-git clone -b claude/vibrant-cray-sl4nla https://github.com/goldz9999/facturas-app.git
+ss -ltnp | grep -E ':3100|:3101' || echo "libres"
 ```
 
-(Cuando los PR se mezclen a `main`, usa `-b main`.)
+Si alguno está ocupado, elige otros y ponlos en `BACKEND_PORT` / `FRONTEND_PORT` del `.env` **y** en `deploy/nginx/sisreg.sublitex.pe.conf`.
 
-## 4. Variables y arranque
+### 4. Variables
 
 ```bash
-cd ~/siregg/SIREGG/deploy
+cd ~/app_despliegue/SIREGG
 cp .env.example .env
-nano .env        # completa SUPABASE_KEY, JWT_SECRET, TELEGRAM_*, GEMINI_*
-docker compose up -d --build
-docker compose logs -f caddy     # espera "certificate obtained successfully"
+nano .env    # SUPABASE_KEY (service_role), JWT_SECRET, TELEGRAM_*, GEMINI_*
 ```
 
-Abre `https://sisreg.sublitex.pe` e inicia sesión.
-
-Comprobación rápida: `curl https://sisreg.sublitex.pe/api/health` → `{"ok":true}`.
-
-## 5. Conectar el bot de Telegram
-
-En el panel, como propietario: **Configuración → Bot de Telegram → Dirección del backend** → `https://sisreg.sublitex.pe/api` → **Conectar bot**.
-Telegram enviará los mensajes a `https://sisreg.sublitex.pe/api/facturas/telegram/webhook`.
-
-## Actualizar a una versión nueva
+### 5. Levantar los contenedores
 
 ```bash
-cd ~/siregg/SIREGG && git pull
-cd ~/siregg/facturas-app && git pull
-cd ~/siregg/SIREGG/deploy && docker compose up -d --build
-docker image prune -f
+docker compose up -d --build
+docker compose ps                         # backend y frontend en "Up"
+curl -s http://127.0.0.1:3100/health      # {"ok":true}
 ```
 
-## Si el servidor ya tiene otro proxy en 80/443
+### 6. Nginx + SSL (una sola vez, requiere `sudo` — lo hace el administrador del VPS)
 
-Si otra app del servidor ya usa los puertos 80/443 (nginx, Traefik, otro Caddy), no levantes el servicio `caddy`:
-en `docker-compose.yml` publica `backend` y `frontend` solo en local
-(`ports: ["127.0.0.1:3100:3000"]` y `["127.0.0.1:8081:8080"]`), quita el servicio `caddy`,
-y en tu proxy existente apunta `sisreg.sublitex.pe/api/*` → `127.0.0.1:3100` (quitando el prefijo `/api`, con WebSocket) y el resto → `127.0.0.1:8081`.
+```bash
+sudo cp ~siregg/app_despliegue/SIREGG/deploy/nginx/sisreg.sublitex.pe.conf /etc/nginx/sites-available/
+sudo ln -s /etc/nginx/sites-available/sisreg.sublitex.pe.conf /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+sudo certbot --nginx -d sisreg.sublitex.pe
+```
 
-## Problemas comunes
+`certbot` agrega el bloque HTTPS y la redirección de HTTP a HTTPS.
+Comprueba: `curl https://sisreg.sublitex.pe/api/health` → `{"ok":true}`.
 
-- **No sale el certificado**: el DNS aún no apunta al servidor o los puertos 80/443 están cerrados (ufw o firewall de Hetzner). `docker compose logs caddy`.
-- **El panel no inicia sesión**: revisa `SUPABASE_KEY` (debe ser la service_role) y `docker compose logs backend`.
-- **El bot no responde**: vuelve a pulsar "Conectar bot" y mira "Último error" en esa pantalla.
+### 7. Conectar el bot de Telegram
+
+En el panel, como propietario: **Configuración → Bot de Telegram → Dirección del backend** →
+`https://sisreg.sublitex.pe/api` → **Conectar bot**.
+
+---
+
+## Despliegue normal (cada versión nueva)
+
+```bash
+ssh siregg@178.156.246.18
+cd ~/app_despliegue/facturas-app && git status && git pull
+cd ~/app_despliegue/SIREGG && git status && git pull
+nano .env                                 # solo si la versión trae variables nuevas
+docker compose up -d --build
+docker compose logs -f --tail=50 backend  # Ctrl + C para salir
+docker compose ps                         # ambos "Up", no "Restarting"
+```
+
+Nginx no se toca: los contenedores se reemplazan en los mismos puertos.
+
+- Solo cambió el panel: `docker compose up -d --build frontend`.
+- Solo cambió el backend: `docker compose up -d --build backend`.
+- **Nunca** `docker compose down -v`.
+- No uses el `docker-compose.yml` de `facturas-app/backend`: este de la raíz de SIREGG ya levanta el backend (mismo nombre de proyecto y puerto).
+
+## Problemas frecuentes
+
+| Problema | Revisar |
+| --- | --- |
+| `backend` en *Restarting* | `docker compose logs --tail=100 backend`: casi siempre falta una variable en `.env` (`JWT_SECRET`, `SUPABASE_KEY`). |
+| El panel carga pero no inicia sesión | `SUPABASE_KEY` debe ser la **service_role**; `curl https://sisreg.sublitex.pe/api/health`. |
+| 502 Bad Gateway | Los contenedores no están arriba o los puertos del `.env` no coinciden con los de Nginx. |
+| Error al subir fotos grandes (413) | `client_max_body_size` en la config de Nginx (viene en 20m). |
+| El panel no se actualiza solo | El WebSocket: la config de Nginx debe tener el bloque `Upgrade`/`Connection` (ya incluido). |
+| El bot no responde | Configuración → Bot de Telegram → "Último error"; vuelve a pulsar "Conectar bot". |
+| Cambié `DOMINIO` y el panel sigue llamando al anterior | El dominio se incrusta al compilar: `docker compose up -d --build frontend`. |
