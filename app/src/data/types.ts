@@ -2,7 +2,7 @@ export type Role = 'Propietario' | 'Administrador' | 'Contador' | 'Supervisor' |
 
 export type PageId =
   | 'dashboard' | 'revision' | 'gastos' | 'comprobantes' | 'proveedores' | 'proyectos'
-  | 'categorias' | 'reportes' | 'usuarios' | 'empresa' | 'personal';
+  | 'categorias' | 'reportes' | 'usuarios' | 'empresa' | 'personal' | 'telegram';
 
 export interface Company {
   id: string;
@@ -12,8 +12,12 @@ export interface Company {
   role: Role;
   color: string;
   kind: 'Empresa' | 'Personal';
-  /** How many expenses arrive pending review in the demo data. */
+  /** Gastos pendientes de revisión (viene de /gastos/conteos). */
   review: number;
+  ruc: string;
+  address: string;
+  currency: 'PEN' | 'USD';
+  logoUrl: string | null;
 }
 
 export type Status = 'proc' | 'pend' | 'info' | 'dup' | 'ok' | 'err' | 'desc';
@@ -24,6 +28,10 @@ export type EvidenceGroup = 'Comprobante' | 'Pago' | 'Evidencia';
 export interface Evidence {
   k: EvidenceKind;
   file: string;
+  /** URL firmada de la imagen real (solo datos del backend). */
+  url?: string | null;
+  /** Huella perceptual de la imagen (para reconocer la misma foto en otro gasto). */
+  huella?: string | null;
 }
 
 export interface Expense {
@@ -43,15 +51,30 @@ export interface Expense {
   dupOf?: string | null;
   ev: Evidence[];
   op: string;
+  /** Confianza de la lectura automática: alta | media | baja. */
+  conf?: string;
+  /** Momento real de registro (ISO). */
+  createdAt?: string;
+  /** Empresa del gasto (en "Gastos personales" se mezclan varias). */
+  empresaId?: number | null;
+  /** Usuario que registró el gasto. */
+  userId?: number | null;
 }
 
 export interface Member {
+  id?: number;
   name: string;
   email: string;
   role: Role;
   inv: 'Aceptada' | 'Pendiente' | 'Expirada';
   acc: 'Activa' | 'Suspendida' | '—';
   me?: boolean;
+  /** Puede registrar gastos personales (lo decide el propietario). */
+  personal: boolean;
+  /** Puede gestionar las cuentas del bot de Telegram (lo decide el propietario). */
+  telegram: boolean;
+  /** Empresas a las que pertenece. */
+  empresaIds: number[];
 }
 
 export interface Notification {

@@ -44,6 +44,11 @@
 }
 .nav-item.on { background: var(--fill-strong); color: var(--color-text); font-weight: 600; }
 .nav-item:hover { background: var(--fill); }
+.side-panel { display: flex; flex-direction: column; gap: var(--space-4); animation: side-in .22s cubic-bezier(.2,.8,.2,1); }
+@keyframes side-in { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+.side-back { display: flex; align-items: center; gap: var(--space-2); padding: 6px var(--space-2); border: 0; border-radius: var(--radius-md); background: transparent; color: var(--color-neutral-800); font-size: 13px; font-weight: 500; cursor: pointer; }
+.side-back:hover { background: var(--fill); color: var(--color-text); }
+.side-foot { margin-top: auto; padding-top: var(--space-3); box-shadow: 0 -1px 0 var(--line); }
 
 /* — header — */
 .topbar {
@@ -147,4 +152,37 @@
 .m-card {
   display: flex; flex-direction: column; gap: 6px; padding: var(--space-3); border: 0; background: var(--color-surface);
   color: inherit; text-align: left; cursor: pointer; border-radius: var(--radius-md);
+}
+
+/* — comparación de duplicados — */
+.dup-grid { display: grid; grid-template-columns: 140px minmax(0,1fr) minmax(0,1fr); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.dup-grid > div { padding: 10px 14px; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 8px; min-height: 44px; min-width: 0; }
+.dup-grid > .dup-h { border-top: 0; background: var(--fill); font-weight: 600; flex-direction: column; align-items: flex-start; justify-content: center; gap: 0; font-size: 14px; }
+.dup-grid > .dup-h .muted { font-weight: 400; font-size: 12.5px; }
+.dup-grid > .dup-nuevo { box-shadow: inset 0 3px 0 var(--color-accent-2); }
+.dup-grid > .dup-exist { box-shadow: inset 0 3px 0 var(--color-accent); }
+.dup-grid > .dup-sec { grid-column: 1 / -1; background: var(--fill); color: var(--color-neutral-700); font-size: 11.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; min-height: 32px; }
+.dup-grid > .dup-lbl { color: var(--color-neutral-700); font-size: 13px; }
+.dup-grid > .dup-val { font-weight: 600; justify-content: space-between; font-size: 14px; }
+.dup-grid > .dup-val > span:first-child { overflow-wrap: anywhere; }
+.dup-grid > .dup-val.diff { background: var(--color-accent-2-100); }
+.dup-grid > .dup-val.neutral { font-weight: 500; }
+.dup-grid > .dup-foto { flex-direction: column; align-items: stretch; }
+.dup-ico { width: 20px; height: 20px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 11px; flex: none; }
+.dup-ico.ok { background: var(--color-accent-100); color: var(--color-accent); }
+.dup-ico.no { background: var(--color-accent-2-100); color: var(--color-accent-2-700); box-shadow: inset 0 0 0 1px var(--color-accent-2); }
+.dup-img { position: relative; border: 0; padding: 0; cursor: zoom-in; background: var(--color-neutral-200); border-radius: 10px; overflow: hidden; display: block; width: 100%; }
+.dup-img img { width: 100%; height: 240px; object-fit: contain; display: block; }
+.dup-img-pago img { height: 200px; }
+.dup-zoom { position: absolute; right: 8px; bottom: 8px; font-size: 11.5px; background: rgba(0,0,0,.6); color: #fff; padding: 3px 8px; border-radius: 6px; display: inline-flex; gap: 4px; align-items: center; }
+.dup-vacio { height: 240px; border-radius: 10px; border: 1.5px dashed var(--line); display: grid; place-items: center; color: var(--color-neutral-700); font-size: 13px; text-align: center; padding: 8px; }
+.dup-vacio-pago { height: 200px; }
+.dup-decide { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--fill); }
+.tag.dup-ok { background: var(--color-accent-100); color: var(--color-accent-900); border-color: transparent; }
+.tag.dup-no { background: var(--color-accent-2-100); color: var(--color-accent-2-700); border-color: transparent; }
+@media (max-width: 720px) {
+  .dup-grid { grid-template-columns: 88px minmax(0,1fr) minmax(0,1fr); }
+  .dup-grid > div { padding: 8px 10px; }
+  .dup-img img, .dup-vacio { height: 160px; }
+  .dup-img-pago img, .dup-vacio-pago { height: 150px; }
 }

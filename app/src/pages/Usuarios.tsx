@@ -1,41 +1,117 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { actualizarUsuario, crearUsuario, empresasUsuario, listUsuarios } from '../api/endpoints';
+import { mapMember, toRolEmpresa } from '../api/mappers';
 import { Dialog, Icon, Select } from '../components/ui';
-import { getMembers, ROLE_DOCS, ROLES } from '../data/org';
+import { ROLE_DOCS, ROLES } from '../data/org';
+import type { RolEmpresa } from '../api/types';
 import type { Member, Role } from '../data/types';
 import { initials } from '../lib/format';
 import { useViewport } from '../hooks/useViewport';
 import { useApp } from '../state/AppState';
 
+interface NewMember { name: string; email: string; password: string; role: Role; personal: boolean; empresas: string[] }
+
 export default function Usuarios() {
-  const { co, edits, setEdits, showToast } = useApp();
+  const { co, showToast, user, companies } = useApp();
   const { w } = useViewport();
-  const [invite, setInvite] = useState<{ email: string; role: Role } | null>(null);
+  const [invite, setInvite] = useState<NewMember | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [apiMembers, setApiMembers] = useState<Member[]>([]);
+  const [tick, setTick] = useState(0);
+
+  // Miembros reales de la empresa activa (GET /usuarios); se recarga al crear uno.
+  useEffect(() => {
+    let alive = true;
+    const empresaId = Number(co.id);
+    listUsuarios(empresaId)
+      .then((list) => { if (alive) setApiMembers(list.map((u) => mapMember(u, empresaId, user.id))); })
+      .catch((e) => { if (alive) showToast(e instanceof Error ? e.message : 'No se pudieron cargar los miembros.', 'ph-warning-circle'); });
+    return () => { alive = false; };
+  }, [co.id, tick, user.id, showToast]);
 
   const myRole = co.role;
   const isOwner = myRole === 'Propietario';
   const canManage = isOwner || myRole === 'Administrador';
   // Only an owner can grant or change the owner role.
   const roleChoices = isOwner ? ROLES : ROLES.slice(1);
-  const members: Member[] = [...getMembers(co.id), ...(edits.invited[co.id] || [])]
-    .map((m) => ({ ...m, ...(edits.members[co.id + '|' + m.email] || {}) }));
-  const setM = (m: Member, p: Partial<Member>) => setEdits((s) => {
-    const k = co.id + '|' + m.email;
-    return { ...s, members: { ...s.members, [k]: { ...(s.members[k] || {}), ...p } } };
-  });
+  const members: Member[] = apiMembers;
+  // Empresas en las que puedo dar acceso: el propietario, todas; un administrador, las que administra.
+  const orgs = companies.filter((c) => c.kind === 'Empresa');
+  const gestionables = orgs.filter((c) => c.role === 'Propietario' || c.role === 'Administrador').map((c) => c.id);
+  const [accessOf, setAccessOf] = useState<{ m: Member; ids: string[] } | null>(null);
+  const saveAccess = async () => {
+    if (!accessOf || accessOf.m.id === undefined || busy) return;
+    const ids = accessOf.ids.filter((id) => gestionables.includes(id)).map(Number);
+    if (!ids.length && !accessOf.m.empresaIds.some((id) => !gestionables.includes(String(id)))) {
+      showToast('Elige al menos una organización.', 'ph-warning-circle'); return;
+    }
+    setBusy(true);
+    try {
+      await empresasUsuario(accessOf.m.id, Number(co.id), ids);
+      setAccessOf(null);
+      setTick((t) => t + 1);
+      showToast('Organizaciones de ' + accessOf.m.name + ' actualizadas.', 'ph-check-circle');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'No se pudo guardar.', 'ph-warning-circle');
+    } finally {
+      setBusy(false);
+    }
+  };
+  const orgChecks = (selected: string[], onChange: (ids: string[]) => void, fixed: string[] = []) => (
+    <div className="stack" style={{ gap: 6 }}>
+      {orgs.map((o) => {
+        const can = gestionables.includes(o.id);
+        const checked = selected.includes(o.id) || fixed.includes(o.id);
+        return (
+          <label key={o.id} className="row" style={{ gap: 8, fontSize: 14, cursor: can ? 'pointer' : 'default', opacity: can ? 1 : 0.6 }}
+            title={can ? undefined : 'No administras esta organización'}>
+            <input type="checkbox" checked={checked} disabled={!can}
+              onChange={(e) => onChange(e.target.checked ? [...selected, o.id] : selected.filter((x) => x !== o.id))} />
+            {o.name}{o.id === co.id ? ' (actual)' : ''}
+          </label>
+        );
+      })}
+    </div>
+  );
+  const update = async (m: Member, body: { rol_empresa?: RolEmpresa; activo?: boolean; puede_registrar_personal?: boolean; puede_gestionar_telegram?: boolean }, ok: string) => {
+    if (m.id === undefined) return;
+    try {
+      await actualizarUsuario(m.id, Number(co.id), body);
+      setTick((t) => t + 1);
+      showToast(ok, 'ph-check-circle');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'No se pudo guardar el cambio.', 'ph-warning-circle');
+    }
+  };
 
   const narrow = w < 1200;
   const cols = narrow ? '40px minmax(0,1fr)' : '40px minmax(0,1fr) 190px 170px 130px';
   const cellCol = narrow ? '2' : 'auto';
 
-  const sendInvite = () => {
-    if (!invite) return;
+  const sendInvite = async () => {
+    if (!invite || busy) return;
+    const name = invite.name.trim();
     const em = invite.email.trim();
+    if (!name) { showToast('Ingresa el nombre de la persona.', 'ph-warning-circle'); return; }
     if (!/^\S+@\S+\.\S+$/.test(em)) { showToast('Ingresa un correo válido.', 'ph-warning-circle'); return; }
-    if (members.some((m) => m.email === em)) { showToast('Ese correo ya es miembro.', 'ph-warning-circle'); return; }
-    const role = invite.role;
-    setEdits((s) => ({ ...s, invited: { ...s.invited, [co.id]: [...(s.invited[co.id] || []), { name: em.split('@')[0], email: em, role, inv: 'Pendiente', acc: '—' }] } }));
-    setInvite(null);
-    showToast('Invitación a ' + em + ' creada (demostración, no se envió correo).', 'ph-paper-plane-tilt');
+    if (invite.password.length < 6) { showToast('La contraseña temporal debe tener al menos 6 caracteres.', 'ph-warning-circle'); return; }
+    if (members.some((m) => m.email.toLowerCase() === em.toLowerCase())) { showToast('Ese correo ya es miembro.', 'ph-warning-circle'); return; }
+    if (!invite.empresas.length) { showToast('Elige al menos una organización.', 'ph-warning-circle'); return; }
+    setBusy(true);
+    try {
+      await crearUsuario(Number(co.id), {
+        nombre: name, email: em, password: invite.password, rol_empresa: toRolEmpresa(invite.role),
+        ...(isOwner && invite.personal && invite.role !== 'Propietario' ? { puede_registrar_personal: true } : {}),
+        empresa_ids: invite.empresas.map(Number),
+      });
+      setInvite(null);
+      setTick((t) => t + 1);
+      showToast('Usuario ' + name + ' creado. Comparte la contraseña temporal con la persona.', 'ph-user-plus');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'No se pudo crear el usuario.', 'ph-warning-circle');
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -43,7 +119,7 @@ export default function Usuarios() {
       <div className="row wrap" style={{ gap: 'var(--space-2)' }}>
         <span style={{ fontSize: 14, color: 'var(--color-neutral-800)' }}>{members.length} miembros en {co.name}</span>
         <span className="grow" />
-        {canManage && <button className="btn btn-primary" onClick={() => setInvite({ email: '', role: 'Empleado' })}><Icon n="ph-user-plus" /> Invitar miembro</button>}
+        {canManage && <button className="btn btn-primary" onClick={() => setInvite({ name: '', email: '', password: '', role: 'Empleado', personal: false, empresas: [co.id] })}><Icon n="ph-user-plus" /> Agregar miembro</button>}
       </div>
       <div className="panel" style={{ gap: 0, padding: '4px 20px' }}>
         {members.map((m) => {
@@ -51,9 +127,8 @@ export default function Usuarios() {
           const editable = canManage && !locked;
           const actions: { label: string; color?: string; run: () => void }[] = [];
           if (editable) {
-            if (m.inv !== 'Aceptada') actions.push({ label: 'Reenviar', run: () => { setM(m, { inv: 'Pendiente' }); showToast('Invitación reenviada a ' + m.email + ' (demostración).', 'ph-paper-plane-tilt'); } });
-            else if (m.acc === 'Activa') actions.push({ label: 'Suspender', color: 'var(--color-accent-2-700)', run: () => { setM(m, { acc: 'Suspendida' }); showToast(m.name + ' suspendido en ' + co.short + ' (demostración).', 'ph-prohibit'); } });
-            else actions.push({ label: 'Reactivar', run: () => { setM(m, { acc: 'Activa' }); showToast(m.name + ' reactivado (demostración).', 'ph-check-circle'); } });
+            if (m.acc === 'Activa') actions.push({ label: 'Desactivar cuenta', color: 'var(--color-accent-2-700)', run: () => update(m, { activo: false }, 'Cuenta de ' + m.name + ' desactivada (aplica a todas sus organizaciones).') });
+            else if (m.acc === 'Suspendida') actions.push({ label: 'Reactivar', run: () => update(m, { activo: true }, 'Cuenta de ' + m.name + ' reactivada.') });
           }
           const invCls = m.inv === 'Aceptada' ? 'tag tag-outline' : m.inv === 'Pendiente' ? 'tag tag-accent' : 'tag tag-accent-2';
           const accCls = m.acc === 'Activa' ? 'tag tag-outline' : m.acc === 'Suspendida' ? 'tag tag-accent-2' : 'tag tag-neutral';
@@ -67,12 +142,38 @@ export default function Usuarios() {
               <span className="row wrap" style={{ gap: 'var(--space-2)', gridColumn: cellCol }}>
                 <span className={invCls}>{m.inv}</span>
                 <span className={accCls}>{m.acc === '—' ? 'Sin cuenta' : m.acc}</span>
+                {m.role === 'Propietario' ? (
+                  <span className="tag tag-outline" title="El propietario siempre puede registrar gastos personales">Personales: siempre</span>
+                ) : isOwner && !m.me ? (
+                  <label className="row" style={{ gap: 6, fontSize: 13, cursor: 'pointer' }} title="Solo el propietario decide quién registra gastos personales">
+                    <input type="checkbox" checked={m.personal}
+                      onChange={(ev) => update(m, { puede_registrar_personal: ev.target.checked },
+                        ev.target.checked ? m.name + ' ya puede registrar gastos personales.' : m.name + ' ya no puede registrar gastos personales.')} />
+                    Gastos personales
+                  </label>
+                ) : (
+                  <span className={m.personal ? 'tag tag-outline' : 'tag tag-neutral'}>{m.personal ? 'Personales: sí' : 'Personales: no'}</span>
+                )}
+                {m.role !== 'Propietario' && isOwner && !m.me ? (
+                  <label className="row" style={{ gap: 6, fontSize: 13, cursor: 'pointer' }} title="Puede vincular o quitar cuentas del bot de Telegram">
+                    <input type="checkbox" checked={m.telegram}
+                      onChange={(ev) => update(m, { puede_gestionar_telegram: ev.target.checked },
+                        ev.target.checked ? m.name + ' ya puede gestionar las cuentas de Telegram.' : m.name + ' ya no gestiona las cuentas de Telegram.')} />
+                    Gestiona Telegram
+                  </label>
+                ) : m.role !== 'Propietario' && m.telegram && <span className="tag tag-outline">Gestiona Telegram</span>}
               </span>
               {editable ? (
                 <Select label="Rol" value={m.role} options={roleChoices.map((v) => ({ v }))} style={{ gridColumn: cellCol }}
-                  onChange={(v) => { setM(m, { role: v as Role }); showToast('Rol de ' + m.name + ' cambiado a ' + v + ' (demostración).', 'ph-user-switch'); }} />
+                  onChange={(v) => update(m, { rol_empresa: toRolEmpresa(v as Role) }, 'Rol de ' + m.name + ' cambiado a ' + v + '.')} />
               ) : <span style={{ fontSize: 14, gridColumn: cellCol }}>{m.role}</span>}
               <span className="row" style={{ gap: 'var(--space-1)', justifyContent: 'flex-end', gridColumn: cellCol }}>
+                {editable && m.role !== 'Propietario' && orgs.length > 1 && (
+                  <button className="btn btn-ghost" title="Organizaciones a las que pertenece"
+                    onClick={() => setAccessOf({ m, ids: m.empresaIds.map(String).filter((id) => gestionables.includes(id)) })}>
+                    <Icon n="ph-buildings" /> {m.empresaIds.length}
+                  </button>
+                )}
                 {actions.map((a) => <button key={a.label} className="btn btn-ghost" style={{ color: a.color }} onClick={a.run}>{a.label}</button>)}
               </span>
             </div>
@@ -87,20 +188,56 @@ export default function Usuarios() {
 
       {invite && (
         <Dialog onClose={() => setInvite(null)}>
-          <div className="dialog-title">Invitar a {co.name}</div>
+          <div className="dialog-title">Agregar a {co.name}</div>
+          <div className="field">
+            <label htmlFor="inv-name">Nombre</label>
+            <input id="inv-name" className="input" autoFocus placeholder="Nombre y apellido" value={invite.name}
+              onChange={(e) => setInvite({ ...invite, name: e.target.value })} />
+          </div>
           <div className="field">
             <label htmlFor="inv-email">Correo electrónico</label>
-            <input id="inv-email" className="input" type="email" autoFocus placeholder="nombre@empresa.pe" value={invite.email}
-              onChange={(e) => setInvite({ ...invite, email: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') sendInvite(); }} />
+            <input id="inv-email" className="input" type="email" placeholder="nombre@empresa.pe" value={invite.email}
+              onChange={(e) => setInvite({ ...invite, email: e.target.value })} />
+          </div>
+          <div className="field">
+            <label htmlFor="inv-pass">Contraseña temporal</label>
+            <input id="inv-pass" className="input" type="text" autoComplete="off" placeholder="Mínimo 6 caracteres" value={invite.password}
+              onChange={(e) => setInvite({ ...invite, password: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') sendInvite(); }} />
           </div>
           <div className="field">
             <label>Rol</label>
             <Select label="Rol" value={invite.role} options={roleChoices.map((v) => ({ v }))} onChange={(v) => setInvite({ ...invite, role: v as Role })} />
           </div>
-          <span className="muted" style={{ fontSize: 13 }}>Demostración: no se enviará ningún correo.</span>
+          {gestionables.length > 1 && (
+            <div className="field">
+              <label>Organizaciones</label>
+              {orgChecks(invite.empresas, (ids) => setInvite({ ...invite, empresas: ids }))}
+            </div>
+          )}
+          {isOwner && invite.role !== 'Propietario' && (
+            <label className="row" style={{ gap: 8, fontSize: 14, cursor: 'pointer' }}>
+              <input type="checkbox" checked={invite.personal} onChange={(e) => setInvite({ ...invite, personal: e.target.checked })} />
+              Puede registrar gastos personales
+            </label>
+          )}
+          <span className="muted" style={{ fontSize: 13 }}>No se envía ningún correo: comparte la contraseña temporal con la persona. {isOwner ? '' : 'Solo el propietario decide quién registra gastos personales.'}</span>
           <div className="dialog-actions">
             <button className="btn btn-ghost" onClick={() => setInvite(null)}>Cancelar</button>
-            <button className="btn btn-primary" onClick={sendInvite}>Enviar invitación</button>
+            <button className="btn btn-primary" onClick={sendInvite} disabled={busy}>{busy ? 'Creando…' : 'Crear usuario'}</button>
+          </div>
+        </Dialog>
+      )}
+      {accessOf && (
+        <Dialog onClose={() => setAccessOf(null)}>
+          <div className="dialog-title">Organizaciones de {accessOf.m.name}</div>
+          <span className="muted" style={{ fontSize: 13 }}>
+            Marca a cuáles puede entrar. En las nuevas tendrá el mismo rol que en {co.short}.
+            {!isOwner && ' Solo puedes cambiar las organizaciones que administras.'}
+          </span>
+          {orgChecks(accessOf.ids, (ids) => setAccessOf({ ...accessOf, ids }), accessOf.m.empresaIds.map(String).filter((id) => !gestionables.includes(id)))}
+          <div className="dialog-actions">
+            <button className="btn btn-ghost" onClick={() => setAccessOf(null)}>Cancelar</button>
+            <button className="btn btn-primary" onClick={saveAccess} disabled={busy}>{busy ? 'Guardando…' : 'Guardar'}</button>
           </div>
         </Dialog>
       )}

@@ -11,20 +11,27 @@ import Comprobantes from './pages/Comprobantes';
 import { ConfigEmpresa, ConfigPersonal } from './pages/Configuracion';
 import Dashboard from './pages/Dashboard';
 import Gastos from './pages/Gastos';
+import Login, { NoCompanies } from './pages/Login';
 import Proveedores from './pages/Proveedores';
 import Proyectos from './pages/Proyectos';
 import Reportes from './pages/Reportes';
 import Revision from './pages/Revision';
+import Telegram from './pages/Telegram';
 import Usuarios from './pages/Usuarios';
 import { AppStateProvider, useApp } from './state/AppState';
+import { AuthProvider, useAuth } from './state/Auth';
 
 function Home() {
   const { lastPage } = useApp();
   return <Navigate to={'/' + lastPage} replace />;
 }
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
+function Gate() {
+  const auth = useAuth();
+  if (auth.status === 'loading') return <div className="muted" style={{ padding: 40 }}>Cargando…</div>;
+  if (auth.status === 'out') return <Login />;
+  if (!auth.companies.length) return <NoCompanies />;
+  return (
     <AppStateProvider>
       <BrowserRouter>
         <Routes>
@@ -43,10 +50,19 @@ createRoot(document.getElementById('root')!).render(
             <Route path="usuarios" element={<Usuarios />} />
             <Route path="empresa" element={<ConfigEmpresa />} />
             <Route path="personal" element={<ConfigPersonal />} />
+            <Route path="telegram" element={<Telegram />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
         </Routes>
       </BrowserRouter>
     </AppStateProvider>
+  );
+}
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <AuthProvider>
+      <Gate />
+    </AuthProvider>
   </StrictMode>,
 );

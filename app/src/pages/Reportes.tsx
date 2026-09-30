@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Icon, Seg } from '../components/ui';
-import { baseProjects } from '../data/expenses';
 import type { Expense } from '../data/types';
 import { fd, money } from '../lib/format';
 import { useApp } from '../state/AppState';
@@ -9,18 +8,34 @@ type Range = '7' | '30' | 'all';
 type Dim = 'period' | 'cat' | 'prov' | 'user' | 'proj' | 'type' | 'pay';
 
 const DIMS: [Dim, string][] = [['period', 'Período'], ['cat', 'Categoría'], ['prov', 'Proveedor'], ['user', 'Usuario'], ['proj', 'Proyecto'], ['type', 'Personal / empresarial'], ['pay', 'Medio de pago']];
-const EXPORTS: [string, string][] = [['PDF', 'ph-file-pdf'], ['Excel', 'ph-microsoft-excel-logo'], ['CSV', 'ph-file-csv']];
+
+const csvCell = (v: string | number) => '"' + String(v).replace(/"/g, '""') + '"';
+
+/** Descarga los gastos del período como CSV (se abre directo en Excel). */
+function downloadCsv(rows: Expense[], name: string) {
+  const head = ['Fecha', 'Descripción', 'Proveedor', 'Categoría', 'Tipo', 'Proyecto', 'Medio de pago', 'Monto', 'Estado', 'Registró'];
+  const body = rows.map((e) => [
+    e.date.getFullYear() + '-' + String(e.date.getMonth() + 1).padStart(2, '0') + '-' + String(e.date.getDate()).padStart(2, '0'),
+    e.desc, e.prov, e.cat, e.type, e.proj, e.pay, e.amt.toFixed(2), e.st, e.user,
+  ]);
+  const csv = "\uFEFF" + [head, ...body].map((r) => r.map(csvCell).join(",")).join("\r\n");
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = name; a.click();
+  URL.revokeObjectURL(url);
+}
 
 export default function Reportes() {
-  const { co, expenses, showToast } = useApp();
+  const { co, expenses, pedidos } = useApp();
   const [range, setRange] = useState<Range>('30');
   const [dimPick, setDim] = useState<Dim>('cat');
 
   const days = range === '7' ? 7 : range === '30' ? 30 : 999;
-  const cut = new Date(2026, 8, 28 - days + 1);
+  const today = new Date();
+  const cut = new Date(today.getFullYear(), today.getMonth(), today.getDate() - days + 1);
   const R = expenses.filter((e) => e.st !== 'desc' && e.date >= cut);
   const tot = R.reduce((a, e) => a + e.amt, 0);
-  const dims = DIMS.filter((d) => d[0] !== 'proj' || baseProjects(co.id).length);
+  const dims = DIMS.filter((d) => d[0] !== 'proj' || pedidos.length > 0 || R.some((e) => e.proj));
   const dim = dims.some((d) => d[0] === dimPick) ? dimPick : 'cat';
 
   let bars: { h: string; lbl: string; tip: string }[] = [];
@@ -48,11 +63,10 @@ export default function Reportes() {
       <div className="row wrap" style={{ gap: 'var(--space-3)' }}>
         <Seg name="rrange" value={range} onChange={setRange} options={[{ value: '7', label: 'Últimos 7 días' }, { value: '30', label: 'Últimos 30 días' }, { value: 'all', label: 'Todo el historial' }]} />
         <span className="grow" />
-        {EXPORTS.map(([label, icon]) => (
-          <button key={label} className="btn btn-secondary" onClick={() => showToast('Exportar ' + label + ': demostración, no se genera archivo.', 'ph-download-simple')}>
-            <Icon n={icon} /> {label}
-          </button>
-        ))}
+        <button className="btn btn-secondary" disabled={!R.length}
+          onClick={() => downloadCsv(R, 'gastos-' + co.short.toLowerCase().replace(/s+/g, '-') + '-' + range + '.csv')}>
+          <Icon n="ph-file-csv" /> Exportar CSV
+        </button>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 20 }}>
         {kpis.map(([l, v]) => (
@@ -99,7 +113,7 @@ export default function Reportes() {
         )}
         {!R.length && <div className="muted">Sin gastos en este período.</div>}
       </div>
-      <p className="muted" style={{ margin: 0, fontSize: 13 }}><Icon n="ph-flask" /> Calculado sobre los gastos de demostración de {co.name}; excluye descartados.</p>
+      <p className="muted" style={{ margin: 0, fontSize: 13 }}>Calculado sobre los gastos cargados de {co.name}; excluye duplicados confirmados.</p>
     </div>
   );
 }

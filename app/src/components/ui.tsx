@@ -36,11 +36,12 @@ export function Seg<T extends string>({ name, value, options, onChange, optStyle
   );
 }
 
-export function Select({ value, options, onChange, label, style, className = 'input' }: {
+export function Select({ value, options, onChange, label, style, className = 'input', id, disabled }: {
   value: string; options: { v: string; l?: string }[]; onChange: (v: string) => void; label?: string; style?: CSSProperties; className?: string;
+  id?: string; disabled?: boolean;
 }) {
   return (
-    <select className={className} value={value} aria-label={label} onChange={(e) => onChange(e.target.value)} style={style}>
+    <select id={id} disabled={disabled} className={className} value={value} aria-label={label} onChange={(e) => onChange(e.target.value)} style={style}>
       {options.map((o) => <option key={o.v} value={o.v}>{o.l ?? o.v}</option>)}
     </select>
   );
@@ -92,15 +93,6 @@ export function CountUp({ value }: { value: number }) {
   return <>{money(shown)}</>;
 }
 
-export function DemoSave({ onSave }: { onSave: () => void }) {
-  return (
-    <div className="row wrap" style={{ gap: 'var(--space-2)' }}>
-      <button className="btn btn-primary" onClick={onSave}><Icon n="ph-floppy-disk" /> Guardar cambios</button>
-      <span className="muted" style={{ fontSize: 13 }}>Demostración: no se guarda en ningún servidor.</span>
-    </div>
-  );
-}
-
 export function Pref({ on, label, desc, onToggle }: { on: boolean; label: string; desc: string; onToggle: () => void }) {
   return (
     <label className="pref">
@@ -111,4 +103,27 @@ export function Pref({ on, label, desc, onToggle }: { on: boolean; label: string
       </span>
     </label>
   );
+}
+
+/** Avatar de una organización: su logotipo si lo tiene, si no sus iniciales sobre su color. */
+export function CoAvatar({ co, size, fontSize }: { co: { initials: string; color: string; logoUrl: string | null; name: string }; size: number; fontSize: number }) {
+  const [broken, setBroken] = useState(false);
+  const logo = co.logoUrl && !broken;
+  return (
+    <span className="avatar" style={{ width: size, height: size, fontSize, background: logo ? 'var(--color-surface)' : co.color, overflow: 'hidden' }}>
+      {logo
+        ? <img src={co.logoUrl!} alt={'Logotipo de ' + co.name} onError={() => setBroken(true)} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+        : co.initials}
+    </span>
+  );
+}
+
+/** Foto de perfil del usuario, o sus iniciales si no tiene (o si la imagen no carga). */
+export function UserPhoto({ user, size }: { user: { name: string; initials: string; avatarUrl: string | null }; size?: number }) {
+  const [broken, setBroken] = useState<string | null>(null);
+  if (user.avatarUrl && broken !== user.avatarUrl) {
+    return <img src={user.avatarUrl} alt={'Foto de ' + user.name} onError={() => setBroken(user.avatarUrl)}
+      style={{ width: size ?? '100%', height: size ?? '100%', objectFit: 'cover', borderRadius: '50%', display: 'block' }} />;
+  }
+  return <>{user.initials}</>;
 }

@@ -1,5 +1,11 @@
+const SYMBOL = { PEN: 'S/', USD: 'US$' } as const;
+let currency: keyof typeof SYMBOL = 'PEN';
+/** Moneda de la organización activa (la fija AppState). */
+export const setCurrency = (c: keyof typeof SYMBOL) => { currency = c; };
+export const currencySymbol = () => SYMBOL[currency];
+
 export const money = (n: number) =>
-  'S/ ' + n.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  SYMBOL[currency] + ' ' + n.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'set', 'oct', 'nov', 'dic'];
 
@@ -18,12 +24,6 @@ export function curve(pts: [number, number][]) {
     d += ' C' + cx.toFixed(1) + ' ' + y0.toFixed(1) + ' ' + cx.toFixed(1) + ' ' + y1.toFixed(1) + ' ' + x1.toFixed(1) + ' ' + y1.toFixed(1);
   }
   return d;
-}
-
-/** Deterministic LCG so demo data is stable between reloads. */
-export function seeded(seed: number) {
-  let s = seed;
-  return () => (s = (s * 9301 + 49297) % 233280) / 233280;
 }
 
 export const initials = (name: string) =>

@@ -1,11 +1,13 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { COMPANIES, CURRENT_USER, NAV_GROUPS, NOTIFS, PAGES, PERSONAL } from '../data/org';
+import { NAV_GROUPS, PAGES, SETTINGS_GROUPS, SETTINGS_PAGES } from '../data/org';
 import type { PageId } from '../data/types';
 import { useMotion } from '../hooks/useMotion';
 import { useViewport } from '../hooks/useViewport';
 import { useApp, type ThemePref } from '../state/AppState';
-import { Icon, Seg } from './ui';
+import * as endpoints from '../api/endpoints';
+import { useAuth } from '../state/Auth';
+import { CoAvatar, Dialog, Icon, Seg, UserPhoto } from './ui';
 
 type Popover = 'company' | 'notif' | 'profile' | null;
 
@@ -30,6 +32,33 @@ export default function Layout() {
   const [open, setOpen] = useState<Popover>(null);
   const [drawer, setDrawer] = useState(false);
   const [coQuery, setCoQuery] = useState('');
+  // Nueva organización (solo propietario). Tras crearla se espera a que aparezca en la lista para entrar.
+  const { refresh } = useAuth();
+  const canCreateCo = app.user.esSuperAdmin || app.companies.some((c) => c.role === 'Propietario');
+  const [newCo, setNewCo] = useState<{ name: string; ruc: string } | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [goTo, setGoTo] = useState<string | null>(null);
+  useEffect(() => {
+    if (goTo && app.companies.some((c) => c.id === goTo)) { setGoTo(null); navigate('/' + app.switchCompany(goTo, 'empresa')); }
+  }, [goTo, app, navigate]);
+  const createCo = async () => {
+    if (!newCo || creating) return;
+    const name = newCo.name.trim();
+    const ruc = newCo.ruc.trim();
+    if (!name) { app.showToast('Escribe el nombre de la organización.', 'ph-warning-circle'); return; }
+    if (ruc && !/^[0-9]{11}$/.test(ruc)) { app.showToast('El RUC debe tener 11 dígitos.', 'ph-warning-circle'); return; }
+    setCreating(true);
+    try {
+      const e = await endpoints.crearEmpresa(Number(co.id === 'personal' ? app.companies[0].id : co.id), name, ruc || undefined);
+      await refresh();
+      setNewCo(null);
+      setGoTo(String(e.id));
+    } catch (err) {
+      app.showToast(err instanceof Error ? err.message : 'No se pudo crear la organización.', 'ph-warning-circle');
+    } finally {
+      setCreating(false);
+    }
+  };
 
   // Pages the active role can't see fall back to the dashboard.
   useEffect(() => {
@@ -38,6 +67,17 @@ export default function Layout() {
 
   const { rememberPage } = app;
   useEffect(() => { rememberPage(page); }, [page, rememberPage]);
+
+  // En una página de configuración la barra lateral muestra el panel de configuración;
+  // "Volver" regresa a la última página principal y "Configuración" a la última de ajustes.
+  const inSettings = SETTINGS_PAGES.includes(page);
+  const lastMain = useRef<PageId>('dashboard');
+  const lastSettings = useRef<PageId>('personal');
+  if (inSettings) lastSettings.current = page;
+  else lastMain.current = page;
+  // Cambian de panel sin cerrar el cajón en móvil, para que se vea la otra barra.
+  const swapPanel = (id: PageId) => { setOpen(null); navigate('/' + id); };
+  const openSettings = () => swapPanel(allowed.includes(lastSettings.current) ? lastSettings.current : 'personal');
 
   const go = (id: PageId) => { setDrawer(false); setOpen(null); navigate('/' + id); };
   const closeAll = () => { setOpen(null); setDrawer(false); };
@@ -50,10 +90,50 @@ export default function Layout() {
   };
 
   const q = coQuery.trim().toLowerCase();
-  const coList = COMPANIES.filter((c) => !q || c.name.toLowerCase().includes(q));
-  const coEmpty = coList.length === 0 && !'gastos personales'.includes(q);
-  const notifs = NOTIFS[co.id] || [];
+  const match = (c: { name: string }) => !q || c.name.toLowerCase().includes(q);
+  const coList = app.companies.filter((c) => c.kind === 'Empresa' && match(c));
+  const personalList = app.companies.filter((c) => c.kind === 'Personal' && match(c));
+  const coEmpty = coList.length === 0 && personalList.length === 0;
+  const coOption = (c: typeof co) => (
+    <button key={c.id} role="option" aria-selected={c.id === co.id} className={'co-opt' + (c.id === co.id ? ' on' : '')} onClick={() => switchTo(c.id)}>
+      <CoAvatar co={c} size={28} fontSize={12} />
+      <span className="stack grow" style={{ lineHeight: 1.2 }}>
+        <span style={{ fontSize: 14, fontWeight: 600 }}>{c.name}</span>
+        <span className="muted" style={{ fontSize: 12 }}>{c.kind === 'Personal' ? 'Tus gastos marcados como personales' : c.role}</span>
+      </span>
+      {c.id === co.id && <Icon n="ph-check" style={{ color: 'var(--color-accent)', fontSize: 18 }} />}
+    </button>
+  );
+  // Avisos calculados con los conteos reales de la empresa activa.
+  const cnt = app.counts;
+  const notifs: { icon: string; c: 'a' | 'a2'; text: string }[] = [
+    ...(cnt && cnt.requiereRevision ? [{ icon: 'ph-sparkle', c: 'a' as const, text: cnt.requiereRevision + (cnt.requiereRevision === 1 ? ' gasto pendiente de revisión' : ' gastos pendientes de revisión') }] : []),
+    ...(cnt && cnt.posibleDuplicado ? [{ icon: 'ph-copy', c: 'a2' as const, text: cnt.posibleDuplicado + (cnt.posibleDuplicado === 1 ? ' posible duplicado' : ' posibles duplicados') }] : []),
+    ...(cnt && cnt.sinComprobante ? [{ icon: 'ph-receipt', c: 'a' as const, text: cnt.sinComprobante + (cnt.sinComprobante === 1 ? ' gasto sin comprobante' : ' gastos sin comprobante') }] : []),
+  ];
   const scrimOn = !!open || (isMobile && drawer);
+  const navButton = (id: PageId) => {
+    const p = PAGES[id];
+    const badge = id === 'revision' && app.pendingCount ? String(app.pendingCount) : '';
+    return (
+      <button key={id} className={'nav-item' + (id === page ? ' on' : '')} aria-current={id === page ? 'page' : undefined} onClick={() => go(id)}>
+        <Icon n={p.icon} style={{ fontSize: 18 }} />
+        <span className="grow">{p.label}</span>
+        {badge && <span className="tag tag-accent-2" style={{ fontSize: 11 }}>{badge}</span>}
+      </button>
+    );
+  };
+  const navGroups = (groups: { label: string; ids: PageId[] }[]) => groups.map((g) => {
+    const items = g.ids.filter((id) => allowed.includes(id));
+    if (!items.length) return null;
+    return (
+      <div key={g.label} className="stack" style={{ gap: 2 }}>
+        <div className="nav-label">{g.label}</div>
+        {items.map(navButton)}
+      </div>
+    );
+  });
+
 
   return (
     <div className="shell">
@@ -70,7 +150,7 @@ export default function Layout() {
 
         <div style={{ position: 'relative', zIndex: 45 }}>
           <button className="co-btn" onClick={() => toggle('company')} aria-expanded={open === 'company'} aria-haspopup="listbox">
-            <span className="avatar" style={{ width: 36, height: 36, fontSize: 14, background: co.color }}>{co.initials}</span>
+            <CoAvatar co={co} size={36} fontSize={14} />
             <span className="stack grow minw0" style={{ lineHeight: 1.2 }}>
               <span className="ellipsis" style={{ fontWeight: 600, fontSize: 15 }}>{co.name}</span>
               <span className="muted" style={{ fontSize: 12 }}>{co.role} · {co.kind}</span>
@@ -80,53 +160,42 @@ export default function Layout() {
           {open === 'company' && (
             <div data-pop="1" role="listbox" className="pop" style={{ left: 0, right: 0, top: 'calc(100% + 6px)', padding: 'var(--space-2)', gap: 2 }}>
               <input className="input" placeholder="Buscar organización…" value={coQuery} onChange={(e) => setCoQuery(e.target.value)} style={{ marginBottom: 'var(--space-1)' }} autoFocus />
-              <div className="nav-label" style={{ padding: 'var(--space-1) var(--space-2)' }}>Organizaciones</div>
-              {coList.map((c) => (
-                <button key={c.id} role="option" aria-selected={c.id === co.id} className={'co-opt' + (c.id === co.id ? ' on' : '')} onClick={() => switchTo(c.id)}>
-                  <span className="avatar" style={{ width: 28, height: 28, fontSize: 12, background: c.color }}>{c.initials}</span>
-                  <span className="stack grow" style={{ lineHeight: 1.2 }}>
-                    <span style={{ fontSize: 14, fontWeight: 600 }}>{c.name}</span>
-                    <span className="muted" style={{ fontSize: 12 }}>{c.role}</span>
-                  </span>
-                  {c.id === co.id && <Icon n="ph-check" style={{ color: 'var(--color-accent)', fontSize: 18 }} />}
-                </button>
-              ))}
+              {coList.length > 0 && <div className="nav-label" style={{ padding: 'var(--space-1) var(--space-2)' }}>Organizaciones</div>}
+              {coList.map(coOption)}
+              {personalList.length > 0 && <div className="nav-label" style={{ padding: 'var(--space-2) var(--space-2) var(--space-1)' }}>Personal</div>}
+              {personalList.map(coOption)}
               {coEmpty && <div className="muted" style={{ padding: 'var(--space-2)', fontSize: 14 }}>Sin coincidencias.</div>}
-              <div style={{ height: 'var(--space-2)' }} />
-              <button role="option" aria-selected={co.id === PERSONAL.id} className={'co-opt' + (co.id === PERSONAL.id ? ' on' : '')} onClick={() => switchTo(PERSONAL.id)}>
-                <span className="avatar" style={{ width: 28, height: 28, background: 'var(--color-neutral-300)', color: 'inherit' }}><Icon n="ph-user" /></span>
-                <span className="grow" style={{ fontSize: 14, fontWeight: 600 }}>Gastos personales</span>
-                {co.id === PERSONAL.id && <Icon n="ph-check" style={{ color: 'var(--color-accent)', fontSize: 18 }} />}
-              </button>
+              {canCreateCo && (
+                <button className="co-opt" style={{ marginTop: 'var(--space-1)', boxShadow: '0 -1px 0 var(--line)', borderRadius: 0 }}
+                  onClick={() => { setOpen(null); setNewCo({ name: coQuery.trim(), ruc: '' }); }}>
+                  <span className="avatar" style={{ width: 28, height: 28, fontSize: 16, background: 'var(--fill-strong)', color: 'var(--color-text)' }}><Icon n="ph-plus" /></span>
+                  <span style={{ fontSize: 14, fontWeight: 600 }}>Nueva organización</span>
+                </button>
+              )}
             </div>
           )}
         </div>
 
-        <nav className="stack" style={{ gap: 'var(--space-4)' }}>
-          {NAV_GROUPS.map((g) => {
-            const items = g.ids.filter((id) => allowed.includes(id));
-            if (!items.length) return null;
-            return (
-              <div key={g.label} className="stack" style={{ gap: 2 }}>
-                <div className="nav-label">{g.label}</div>
-                {items.map((id) => {
-                  const p = PAGES[id];
-                  const badge = id === 'revision' && app.pendingCount ? String(app.pendingCount) : '';
-                  return (
-                    <button key={id} className={'nav-item' + (id === page ? ' on' : '')} aria-current={id === page ? 'page' : undefined} onClick={() => go(id)}>
-                      <Icon n={p.icon} style={{ fontSize: 18 }} />
-                      <span className="grow">{p.label}</span>
-                      {badge && <span className="tag tag-accent-2" style={{ fontSize: 11 }}>{badge}</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            );
-          })}
-        </nav>
-        <div className="muted" style={{ marginTop: 'auto', padding: 'var(--space-2)', fontSize: 12, lineHeight: 1.4 }}>
-          <Icon n="ph-flask" /> Prototipo de demostración. Sin backend: los cambios no se guardan.
-        </div>
+        {inSettings ? (
+          <nav key="settings" className="side-panel" aria-label="Configuración">
+            <div className="stack" style={{ gap: 6 }}>
+              <button className="side-back" onClick={() => swapPanel(lastMain.current)}><Icon n="ph-arrow-left" /> Volver</button>
+              <div style={{ fontSize: 17, fontWeight: 600, letterSpacing: '-.01em', padding: '0 var(--space-2)' }}>Configuración</div>
+            </div>
+            {navGroups(SETTINGS_GROUPS)}
+          </nav>
+        ) : (
+          <>
+            <nav key="main" className="stack" style={{ gap: 'var(--space-4)' }}>{navGroups(NAV_GROUPS)}</nav>
+            <div className="side-foot">
+              <button className="nav-item" style={{ width: '100%' }} onClick={openSettings}>
+                <Icon n="ph-gear-six" style={{ fontSize: 18 }} />
+                <span className="grow">Configuración</span>
+                <Icon n="ph-caret-right" style={{ fontSize: 14, color: 'var(--color-neutral-700)' }} />
+              </button>
+            </div>
+          </>
+        )}
       </aside>
 
       <div className="stack grow minw0">
@@ -136,7 +205,7 @@ export default function Layout() {
             <>
               <button className="btn btn-ghost btn-icon" aria-label="Abrir menú" onClick={() => setDrawer(true)}><Icon n="ph-list" style={{ fontSize: 22 }} /></button>
               <button onClick={() => setDrawer(true)} className="row" style={{ gap: 6, border: 0, background: 'transparent', color: 'inherit', cursor: 'pointer', minHeight: 44, minWidth: 0 }}>
-                <span className="avatar" style={{ width: 26, height: 26, fontSize: 11, background: co.color }}>{co.initials}</span>
+                <CoAvatar co={co} size={26} fontSize={11} />
                 <span className="ellipsis" style={{ fontWeight: 600, fontSize: 14, maxWidth: '36vw' }}>{co.short}</span>
               </button>
             </>
@@ -167,10 +236,10 @@ export default function Layout() {
                 {notifs.map((n, i) => (
                   <div key={i} className="row" style={{ gap: 'var(--space-2)', padding: 'var(--space-2) 0', fontSize: 14, alignItems: 'flex-start' }}>
                     <Icon n={n.icon} style={{ fontSize: 18, color: n.c === 'a2' ? 'var(--color-accent-2)' : 'var(--color-accent)' }} />
-                    <div className="stack" style={{ gap: 2 }}><span>{n.text}</span><span className="muted" style={{ fontSize: 12 }}>{n.time}</span></div>
+                    <div className="stack" style={{ gap: 2 }}><span>{n.text}</span></div>
                   </div>
                 ))}
-                {!notifs.length && <div className="muted" style={{ fontSize: 14 }}>Sin notificaciones en este espacio.</div>}
+                {!notifs.length && <div className="muted" style={{ fontSize: 14 }}>Sin avisos pendientes.</div>}
               </div>
             )}
           </div>
@@ -181,16 +250,16 @@ export default function Layout() {
           )}
 
           <div style={{ position: 'relative' }}>
-            <button className="me-avatar" aria-label="Perfil" onClick={() => toggle('profile')}>{CURRENT_USER.initials}</button>
+            <button className="me-avatar" aria-label="Perfil" onClick={() => toggle('profile')} style={{ overflow: 'hidden', padding: app.user.avatarUrl ? 0 : undefined }}><UserPhoto user={app.user} /></button>
             {open === 'profile' && (
               <div data-pop="1" className="pop" style={{ right: 0, top: 'calc(100% + 6px)', width: 260, padding: 'var(--space-3)', gap: 'var(--space-2)' }}>
-                <div className="stack" style={{ lineHeight: 1.3 }}><strong>{CURRENT_USER.name}</strong><span className="muted" style={{ fontSize: 13 }}>{CURRENT_USER.email}</span></div>
+                <div className="stack" style={{ lineHeight: 1.3 }}><strong>{app.user.name}</strong><span className="muted" style={{ fontSize: 13 }}>{app.user.email}</span></div>
                 <div className="nav-label" style={{ padding: 0, marginTop: 'var(--space-2)' }}>Tema</div>
                 <Seg name="theme-p" value={theme} onChange={setTheme} style={{ width: '100%' }} optStyle={{ flex: 1, justifyContent: 'center' }}
                   options={THEME_OPTS.map((o) => ({ value: o.value, label: o.label }))} />
                 <button className="btn btn-ghost" onClick={() => go('personal')} style={{ justifyContent: 'flex-start', marginTop: 'var(--space-2)' }}><Icon n="ph-gear" /> Configuración personal</button>
                 <button className="btn btn-ghost" style={{ justifyContent: 'flex-start' }}
-                  onClick={() => { setOpen(null); app.showToast('Cierre de sesión simulado: no hay backend conectado', 'ph-sign-out'); }}>
+                  onClick={() => { setOpen(null); app.logout(); }}>
                   <Icon n="ph-sign-out" /> Cerrar sesión
                 </button>
               </div>
@@ -203,6 +272,27 @@ export default function Layout() {
           {loading ? <LoadingState name={co.name} /> : <Outlet key={co.id} />}
         </main>
       </div>
+
+      {newCo && (
+        <Dialog onClose={() => setNewCo(null)}>
+          <div className="dialog-title">Nueva organización</div>
+          <div className="field">
+            <label htmlFor="new-co-name">Nombre</label>
+            <input id="new-co-name" className="input" autoFocus placeholder="Mi empresa S.A.C." value={newCo.name}
+              onChange={(e) => setNewCo({ ...newCo, name: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') createCo(); }} />
+          </div>
+          <div className="field">
+            <label htmlFor="new-co-ruc">RUC (opcional)</label>
+            <input id="new-co-ruc" className="input" inputMode="numeric" maxLength={11} placeholder="11 dígitos" value={newCo.ruc}
+              onChange={(e) => setNewCo({ ...newCo, ruc: e.target.value.replace(/\D/g, '') })} onKeyDown={(e) => { if (e.key === 'Enter') createCo(); }} />
+          </div>
+          <span className="muted" style={{ fontSize: 13 }}>Quedarás como propietario. Luego eliges qué usuarios pueden verla desde Usuarios y miembros.</span>
+          <div className="dialog-actions">
+            <button className="btn btn-ghost" onClick={() => setNewCo(null)}>Cancelar</button>
+            <button className="btn btn-primary" onClick={createCo} disabled={creating}>{creating ? 'Creando…' : 'Crear organización'}</button>
+          </div>
+        </Dialog>
+      )}
 
       {app.toast && (
         <div data-toast="1" role="status" className="toast" style={{ left: isMobile ? 'var(--space-4)' : 'auto' }}>
@@ -220,7 +310,7 @@ function PageHeader({ page }: { page: PageId }) {
   const navigate = useNavigate();
   const app = useApp();
   const isDash = page === 'dashboard' && !loading;
-  const scope = co.role === 'Empleado' ? 'Mostrando solo tus gastos' : co.kind === 'Personal' ? 'Espacio personal, separado de las empresas' : 'Todos los gastos de la organización';
+  const scope = app.personal ? 'Tus gastos personales en todas tus organizaciones' : 'Todos los gastos de la organización';
   let actions: ReactNode = null;
   if (isDash) {
     const goReports = () => app.allowed.includes('reportes') ? navigate('/reportes') : app.showToast('Tu rol no tiene acceso a Reportes en ' + co.short, 'ph-lock');
@@ -236,7 +326,7 @@ function PageHeader({ page }: { page: PageId }) {
     <div className="row wrap" style={{ alignItems: 'flex-end', justifyContent: 'space-between', gap: 16 }}>
       <div className="stack minw0" style={{ gap: 6 }}>
         <div className="row wrap muted" style={{ gap: 10, fontSize: 13 }}>
-          <span>{co.name} · Setiembre 2026</span>
+          <span>{co.name} · <span style={{ textTransform: 'capitalize' }}>{new Date().toLocaleDateString('es-PE', { month: 'long', year: 'numeric' })}</span></span>
           {isDash && (
             <span className="row" style={{ gap: 6 }}>
               <span className="dot" style={{ width: 6, height: 6, background: 'var(--color-accent)', boxShadow: '0 0 10px var(--color-accent)' }} />{scope}
@@ -251,7 +341,7 @@ function PageHeader({ page }: { page: PageId }) {
 }
 
 export const showRegisterInfo = (toast: (t: string, i?: string) => void) =>
-  toast('Los gastos se registran enviando foto, audio o texto por Telegram. Demostración: no se crea ningún registro.', 'ph-telegram-logo');
+  toast('Los gastos se registran enviando foto, audio o texto por Telegram.', 'ph-telegram-logo');
 
 function LoadingState({ name }: { name: string }) {
   return (

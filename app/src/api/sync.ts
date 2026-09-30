@@ -1,0 +1,73 @@
+import type { Expense } from '../data/types';
+
+export type MedioPago = 'yape' | 'transferencia' | 'efectivo' | 'tarjeta' | 'otro';
+
+export interface PatchBody {
+  monto?: number;
+  descripcion?: string;
+  es_personal?: boolean;
+  categoria_id?: number;
+  pedido_id?: number | null;
+  proveedor_nombre?: string;
+  /** Solo si cambió; null o '' borra el RUC del proveedor. */
+  proveedor_ruc?: string | null;
+  medio_pago?: MedioPago;
+}
+
+const MEDIO: Record<string, MedioPago> = { Yape: 'yape', Transferencia: 'transferencia', Efectivo: 'efectivo', Tarjeta: 'tarjeta', Otro: 'otro' };
+
+export type SyncPlan =
+  | { kind: 'none' }
+  | { kind: 'confirmarConfianza' }
+  | { kind: 'confirmarDuplicado'; body?: PatchBody }
+  | { kind: 'descartarDuplicado'; body?: PatchBody }
+  | { kind: 'patch'; body: PatchBody };
+
+/**
+ * Decide qué endpoint corresponde a un cambio hecho desde la UI.
+ * "Conservar ambos" (dup→ok) = el backend lo llama descartar-duplicado (NO es el mismo pago);
+ * "Descartar este gasto" (dup→desc) = confirmar-duplicado (SÍ es el mismo pago, no suma a totales).
+ * Si además se corrigieron datos, `body` se guarda DESPUÉS de resolver el duplicado.
+ * Proveedor y RUC se mandan juntos cuando cambia el proveedor (el backend lo busca o lo crea);
+ * si solo cambia el RUC, se corrige el del proveedor. `cats` son las categorías de la empresa del gasto.
+ */
+export function planSync(
+  cur: Expense,
+  p: Partial<Expense>,
+  cats: { id: number; nombre: string }[],
+  pedidos: { id: number; nombre: string }[],
+): SyncPlan {
+  const body: PatchBody = {};
+  if (p.amt !== undefined && p.amt !== cur.amt) body.monto = p.amt;
+  if (p.desc !== undefined && p.desc !== cur.desc) body.descripcion = p.desc;
+  if (p.type !== undefined && p.type !== cur.type) body.es_personal = p.type === 'Personal';
+  if (p.cat !== undefined && p.cat !== cur.cat) {
+    const c = cats.find((x) => x.nombre === p.cat);
+    if (c) body.categoria_id = c.id;
+  }
+  if (p.proj !== undefined && p.proj !== cur.proj) {
+    if (p.proj === '') body.pedido_id = null;
+    else {
+      const ped = pedidos.find((x) => x.nombre === p.proj);
+      if (ped) body.pedido_id = ped.id;
+    }
+  }
+  const prov = p.prov !== undefined ? p.prov.trim() : cur.prov;
+  const ruc = p.ruc !== undefined ? p.ruc.trim() : cur.ruc;
+  if (prov !== cur.prov && prov) body.proveedor_nombre = prov;
+  if (ruc !== cur.ruc) {
+    body.proveedor_ruc = ruc || null;
+    if (prov) body.proveedor_nombre = prov;
+  }
+  if (p.pay !== undefined && p.pay !== cur.pay && MEDIO[p.pay]) body.medio_pago = MEDIO[p.pay];
+  const hasBody = Object.keys(body).length > 0;
+
+  if (cur.st === 'dup' && p.st === 'ok') return hasBody ? { kind: 'descartarDuplicado', body } : { kind: 'descartarDuplicado' };
+  if (cur.st === 'dup' && p.st === 'desc') return hasBody ? { kind: 'confirmarDuplicado', body } : { kind: 'confirmarDuplicado' };
+  // "No era duplicado" sobre uno ya descartado: se quita la marca y vuelve a sumar.
+  if (cur.st === 'desc' && p.st === 'ok') return hasBody ? { kind: 'descartarDuplicado', body } : { kind: 'descartarDuplicado' };
+
+  if (hasBody) return { kind: 'patch', body };
+  if (cur.st === 'pend' && p.st === 'ok') return { kind: 'confirmarConfianza' };
+  return { kind: 'none' };
+}

@@ -7,10 +7,10 @@ import { useApp } from '../state/AppState';
 import { CountUp, Icon, TitleIcon } from '../components/ui';
 
 export default function Dashboard() {
-  const { co, pendingCount } = useApp();
+  const { co, pendingCount, resumen, expenses } = useApp();
   const navigate = useNavigate();
   const { isWide } = useViewport();
-  const d = useMemo(() => buildDashboard(co), [co]);
+  const d = useMemo(() => buildDashboard(co, resumen, expenses), [co, resumen, expenses]);
   const [hi, setHi] = useState<number | null>(null);
 
   const sel = hi ?? 13;
@@ -30,16 +30,16 @@ export default function Dashboard() {
           <div style={{ position: 'absolute', inset: '-50% 45% 45% -15%', background: 'radial-gradient(closest-side,color-mix(in srgb,var(--color-accent) 22%,transparent),transparent)', pointerEvents: 'none' }} />
           <div className="row wrap" style={{ position: 'relative', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
             <div className="stack" style={{ gap: 8 }}>
-              <span className="muted" style={{ fontSize: 13 }}>Gasto de setiembre</span>
+              <span className="muted" style={{ fontSize: 13 }}>Gasto de {d.monthName}</span>
               <span className="num" style={{ fontSize: 'clamp(38px,4.6vw,52px)', fontWeight: 600, letterSpacing: '-.04em', lineHeight: 1 }}><CountUp value={d.month} /></span>
               <span className="row" style={{ gap: 8, fontSize: 13 }}>
                 <span style={{ padding: '3px 8px', borderRadius: 7, fontWeight: 500, background: md.up > 0 ? 'var(--color-accent-2-100)' : 'var(--color-accent-100)', color: md.dColor }}>{md.delta}</span>
-                <span className="muted">vs. agosto</span>
+                <span className="muted">{md.vs}</span>
               </span>
             </div>
             <div className="stack" style={{ alignItems: 'flex-end', gap: 2, minWidth: 140 }}>
               <span className="num" style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-.02em' }}>{money(d.vals[sel])}</span>
-              <span className="muted" style={{ fontSize: 12.5 }}>{15 + sel} de setiembre{sel === 13 ? ' · hoy' : ''}</span>
+              <span className="muted" style={{ fontSize: 12.5 }}>{d.dayLabels[sel]}{sel === 13 ? ' · hoy' : ''}</span>
             </div>
           </div>
           <div style={{ position: 'relative', height: 200 }}>
@@ -106,7 +106,7 @@ export default function Dashboard() {
       <div style={{ display: 'grid', gridTemplateColumns: isWide ? 'minmax(0,1fr) minmax(0,1.25fr)' : 'minmax(0,1fr)', gap: 20 }}>
         <section data-a="1" className="panel" style={{ gap: 16 }}>
           <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
-            <h2 className="panel-title">Por categoría</h2><span className="muted" style={{ fontSize: 12.5 }}>Setiembre</span>
+            <h2 className="panel-title">Por categoría</h2><span className="muted" style={{ fontSize: 12.5 }}>{d.monthLabel}</span>
           </div>
           <div className="row wrap" style={{ gap: 20 }}>
             <div style={{ position: 'relative', width: 150, height: 150, flex: 'none' }}>
@@ -154,7 +154,6 @@ export default function Dashboard() {
           ))}
         </section>
       </div>
-      <p className="demo-note"><Icon n="ph-flask" /> Datos ficticios de demostración para {co.name}.</p>
     </div>
   );
 }

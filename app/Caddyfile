@@ -1,0 +1,20 @@
+{
+	admin off
+	auto_https off
+}
+
+:{$PORT} {
+	root * /srv
+	encode zstd gzip
+
+	# Los archivos de /assets llevan hash en el nombre: se cachean para siempre.
+	# El resto (index.html) se revalida siempre, para tomar cada despliegue nuevo.
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+	@html not path /assets/*
+	header @html Cache-Control "no-cache"
+
+	# SPA: toda ruta que no sea un archivo (/gastos/12, /empresa…) sirve index.html.
+	try_files {path} /index.html
+	file_server
+}
