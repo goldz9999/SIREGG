@@ -1,4 +1,4 @@
-# SIREGG en el VPS (Nginx del host + Docker). Ver deploy/README.md.
+# SIREGG en el VPS (Nginx del host + Docker).
 #
 # Nginx (host) recibe https://sisreg.sublitex.pe y reenvía:
 #   /api/*  -> 127.0.0.1:${BACKEND_PORT}   (backend: API, Socket.IO, webhook de Telegram)
