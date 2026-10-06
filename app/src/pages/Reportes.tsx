@@ -30,10 +30,14 @@ export default function Reportes() {
   const [range, setRange] = useState<Range>('30');
   const [dimPick, setDim] = useState<Dim>('cat');
 
-  const days = range === '7' ? 7 : range === '30' ? 30 : 999;
   const today = new Date();
-  const cut = new Date(today.getFullYear(), today.getMonth(), today.getDate() - days + 1);
-  const R = expenses.filter((e) => e.st !== 'desc' && e.date >= cut);
+  const R = range === 'all'
+    ? expenses.filter((e) => e.st !== 'desc')
+    : expenses.filter((e) => {
+        const days = range === '7' ? 7 : 30;
+        const cut = new Date(today.getFullYear(), today.getMonth(), today.getDate() - days + 1);
+        return e.st !== 'desc' && e.date >= cut;
+      });
   const tot = R.reduce((a, e) => a + e.amt, 0);
   const dims = DIMS.filter((d) => d[0] !== 'proj' || pedidos.length > 0 || R.some((e) => e.proj));
   const dim = dims.some((d) => d[0] === dimPick) ? dimPick : 'cat';

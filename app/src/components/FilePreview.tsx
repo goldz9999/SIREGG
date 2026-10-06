@@ -37,10 +37,18 @@ export default function FilePreview({ expense: e, index, onClose, onGoToExpense 
       )}
       {f.k !== 'Audio' && (
         f.url
-          ? (
-            <a href={f.url} target="_blank" rel="noreferrer" title="Abrir la imagen en tamaño completo">
-              <img src={f.url} alt={f.k + ' de ' + (e.prov || 'el gasto')} style={{ width: '100%', maxHeight: '60vh', objectFit: 'contain', background: 'var(--color-neutral-200)', borderRadius: 'var(--radius-md)', display: 'block' }} />
-            </a>
+          ? (/\.pdf(\?|$)/i.test(f.url)
+            ? (
+              <div className="stack" style={{ gap: 'var(--space-3)', alignItems: 'center', padding: 'var(--space-4)', background: 'var(--color-neutral-200)', borderRadius: 'var(--radius-md)' }}>
+                <Icon n="ph-file-pdf" style={{ fontSize: 48, color: 'var(--color-accent-2)' }} />
+                <a href={f.url} target="_blank" rel="noreferrer" className="btn btn-secondary">Abrir PDF</a>
+              </div>
+            )
+            : (
+              <a href={f.url} target="_blank" rel="noreferrer" title="Abrir la imagen en tamaño completo">
+                <img src={f.url} alt={f.k + ' de ' + (e.prov || 'el gasto')} style={{ width: '100%', maxHeight: '60vh', objectFit: 'contain', background: 'var(--color-neutral-200)', borderRadius: 'var(--radius-md)', display: 'block' }} />
+              </a>
+            )
           )
           : f.k === 'Foto' && <div className="muted" style={{ padding: 'var(--space-4)', textAlign: 'center' }}>La imagen no está disponible.</div>
       )}

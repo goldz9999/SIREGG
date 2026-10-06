@@ -19,19 +19,19 @@ export const setEmpresaActiva = (empresaId: number) =>
   api<{ ultima_empresa_id: number }>('/auth/empresa-activa', { method: 'PATCH', body: { empresa_id: empresaId } });
 
 export const listGastos = (empresaId: number) =>
-  api<ApiGasto[]>('/gastos', { query: { empresa_id: empresaId, limite: 200 } });
+  api<ApiGasto[]>('/gastos', { query: { empresa_id: empresaId, limite: 1000 } });
 export const resumen = (empresaId: number) => api<ApiResumen>('/gastos/resumen', { query: { empresa_id: empresaId } });
 export const conteos = (empresaId: number) => api<ApiConteos>('/gastos/conteos', { query: { empresa_id: empresaId } });
 
 // Duplicados ya confirmados ("Descartar este gasto"): el listado normal no los trae.
 export const listDuplicados = (empresaId: number) =>
-  api<ApiGasto[]>('/gastos', { query: { empresa_id: empresaId, duplicado_confirmado: true, limite: 200 } });
+  api<ApiGasto[]>('/gastos', { query: { empresa_id: empresaId, duplicado_confirmado: true, limite: 1000 } });
 export const listDuplicadosPersonales = () =>
-  api<ApiGasto[]>('/gastos', { query: { ambito: 'personal', duplicado_confirmado: true, limite: 200 } });
+  api<ApiGasto[]>('/gastos', { query: { ambito: 'personal', duplicado_confirmado: true, limite: 1000 } });
 
 // Espacio "Gastos personales": mis gastos marcados como personales, de todas mis empresas.
 const PERSONAL = { ambito: 'personal' } as const;
-export const listGastosPersonales = () => api<ApiGasto[]>('/gastos', { query: { ...PERSONAL, limite: 200 } });
+export const listGastosPersonales = () => api<ApiGasto[]>('/gastos', { query: { ...PERSONAL, limite: 1000 } });
 export const resumenPersonal = () => api<ApiResumen>('/gastos/resumen', { query: PERSONAL });
 export const conteosPersonal = () => api<ApiConteos>('/gastos/conteos', { query: PERSONAL });
 export const categorias = (empresaId: number) => api<ApiCategoria[]>('/categorias', { query: { empresa_id: empresaId } });
