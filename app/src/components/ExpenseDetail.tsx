@@ -384,9 +384,10 @@ export default function ExpenseDetail({ expense: base, done, onDone, onResolved,
                     return (
                       <button key={j} data-a="1" onClick={() => setPreview(j)} className="list-btn hover-n100"
                         style={{ gap: 'var(--space-3)', padding: 'var(--space-2)', margin: '0 calc(var(--space-2) * -1)', borderRadius: 'var(--radius-md)', minHeight: 48 }}>
-                        {f.url && f.k !== 'Audio'
+                        {f.url && f.k !== 'Audio' && !/\.pdf(\?|$)/i.test(f.url)
                           ? <img src={f.url} alt="" loading="lazy" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 8, flex: 'none', background: 'var(--color-neutral-200)' }} />
-                          : <Icon n={icon} style={{ fontSize: 22, color: 'var(--color-accent)' }} />}
+                          : <Icon n={f.url && /\.pdf(\?|$)/i.test(f.url) ? 'ph-file-pdf' : icon}
+                              style={{ fontSize: 22, color: f.url && /\.pdf(\?|$)/i.test(f.url) ? 'var(--color-accent-2)' : 'var(--color-accent)' }} />}
                         <span className="stack grow" style={{ lineHeight: 1.3 }}><span style={{ fontSize: 15 }}>{titulo}</span><span className="muted" style={{ fontSize: 12 }}>{detalle}</span></span>
                         <span className={GROUP_CLS[grupo]}>{grupo}</span>
                       </button>
