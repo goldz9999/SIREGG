@@ -47,7 +47,7 @@ export default function ExpenseDetail({ expense: base, done, onDone, onResolved,
   onBack?: () => void;
   primaryRef?: MutableRefObject<(() => void) | null>;
 }) {
-  const { co, companies, personal, user, expenses, duplicados, patchExpense, showToast, categories, pedidos } = useApp();
+  const { co, companies, personal, user, expenses, duplicados, patchExpense, deleteExpense, showToast, categories, pedidos } = useApp();
   // Los archivos se piden con el gasto completo: trae la hora de cada comprobante y pago,
   // con la que se sabe qué foto es de la factura y cuál del pago.
   const [evFull, setEvFull] = useState<Evidence[] | null>(null);
@@ -71,6 +71,7 @@ export default function ExpenseDetail({ expense: base, done, onDone, onResolved,
     return () => { alive = false; };
   }, [base.dupOf, base.empresaId, co.id]);
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [preview, setPreview] = useState<number | null>(null);
   // Vista ampliada de un archivo del gasto original (comparación de duplicados).
   const [origPreview, setOrigPreview] = useState<number | null>(null);
@@ -206,6 +207,23 @@ export default function ExpenseDetail({ expense: base, done, onDone, onResolved,
         )}
         <div className="row wrap" style={{ gap: 8, paddingTop: 16, boxShadow: '0 -1px 0 var(--line)' }}>
           {actions.map((a) => <button key={a.label} className={a.cls} onClick={a.run} style={{ color: a.color }}><Icon n={a.icon} /> {a.label}</button>)}
+          {!draft && (
+            confirmDelete ? (
+              <div className="row wrap" style={{ gap: 8, marginLeft: 'auto' }}>
+                <span style={{ fontSize: 13, color: 'var(--color-accent-2-700)', alignSelf: 'center' }}>¿Eliminar permanentemente?</span>
+                <button className="btn btn-secondary" style={{ color: 'var(--color-accent-2-700)' }}
+                  onClick={() => { deleteExpense(e.id); onResolved(); showToast('Gasto eliminado.', 'ph-trash'); }}>
+                  <Icon n="ph-trash" /> Sí, eliminar
+                </button>
+                <button className="btn btn-ghost" onClick={() => setConfirmDelete(false)}>Cancelar</button>
+              </div>
+            ) : (
+              <button className="btn btn-ghost" style={{ marginLeft: 'auto', color: 'var(--color-accent-2-700)' }}
+                onClick={() => setConfirmDelete(true)}>
+                <Icon n="ph-trash" /> Eliminar
+              </button>
+            )
+          )}
         </div>
       </section>
 

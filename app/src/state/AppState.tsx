@@ -39,6 +39,7 @@ interface AppState {
   pedidos: ApiPedido[];
   proveedores: ApiProveedor[];
   patchExpense: (id: string, p: Partial<Expense>) => void;
+  deleteExpense: (id: string) => void;
   /** Vuelve a pedir los datos de la empresa activa, sin mostrar el estado de carga. */
   reload: () => void;
   toast: Toast | null;
@@ -263,9 +264,23 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       });
   }, [coId, categories, pedidos, reload, showToast]);
 
+  const deleteExpense = useCallback((id: string) => {
+    const cur = expensesRef.current.find((e) => e.id === id);
+    if (!cur) return;
+    const empresaId = cur.empresaId ?? Number(coId);
+    if (!Number.isInteger(empresaId)) return;
+    setOverlay((s) => ({ ...s, [id]: { ...(s[id] || {}), st: 'desc' } }));
+    endpoints.rechazar(Number(id), empresaId)
+      .then(() => reload())
+      .catch((err) => {
+        setOverlay((s) => { const rest = { ...s }; delete rest[id]; return rest; });
+        showToast(err instanceof Error ? err.message : 'No se pudo eliminar el gasto.', 'ph-warning-circle');
+      });
+  }, [coId, reload, showToast]);
+
   const value: AppState = {
     theme, dark, setTheme: setThemeState, user, logout: auth.logout, companies, co, personal, allowed, loading, switchCompany,
-    expenses, duplicados, pendingCount, resumen, counts, categories, pedidos, proveedores, patchExpense, reload,
+    expenses, duplicados, pendingCount, resumen, counts, categories, pedidos, proveedores, patchExpense, deleteExpense, reload,
     toast, showToast, hideToast: () => setToast(null),
     lastPage, rememberPage: setLastPage,
   };
