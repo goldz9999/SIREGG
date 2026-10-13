@@ -3,7 +3,6 @@ import { actualizarUsuario, crearUsuario, empresasUsuario, listUsuarios } from '
 import { mapMember, toRolEmpresa } from '../api/mappers';
 import { Dialog, Icon, Select } from '../components/ui';
 import { ROLE_DOCS, ROLES } from '../data/org';
-import type { RolEmpresa } from '../api/types';
 import type { Member, Role } from '../data/types';
 import { initials } from '../lib/format';
 import { useViewport } from '../hooks/useViewport';
@@ -52,6 +51,7 @@ export default function Usuarios() {
   const saveEdit = async () => {
     if (!editing || editing.m.id === undefined || busy) return;
     const { m, role, ids, personal, telegram } = editing;
+    const memberId = m.id as number;
     setBusy(true);
     try {
       const body: Parameters<typeof actualizarUsuario>[2] = {};
@@ -60,13 +60,13 @@ export default function Usuarios() {
       if (telegram !== m.telegram) body.puede_gestionar_telegram = telegram;
 
       const patchPromise = Object.keys(body).length
-        ? actualizarUsuario(m.id, Number(co.id), body)
+        ? actualizarUsuario(memberId, Number(co.id), body)
         : Promise.resolve();
 
       const gestionableIds = ids.filter((id) => gestionables.includes(id)).map(Number);
       const orgPromise =
         orgs.length > 1
-          ? empresasUsuario(m.id, Number(co.id), gestionableIds)
+          ? empresasUsuario(memberId, Number(co.id), gestionableIds)
           : Promise.resolve();
 
       await Promise.all([patchPromise, orgPromise]);
@@ -83,10 +83,11 @@ export default function Usuarios() {
   const toggleActive = async () => {
     if (!editing || editing.m.id === undefined || busy) return;
     const { m } = editing;
+    const memberId = m.id as number;
     const newActive = m.acc !== 'Activa';
     setBusy(true);
     try {
-      await actualizarUsuario(m.id, Number(co.id), { activo: newActive });
+      await actualizarUsuario(memberId, Number(co.id), { activo: newActive });
       setEditing(null);
       setTick((t) => t + 1);
       showToast(newActive ? 'Cuenta de ' + m.name + ' reactivada.' : 'Cuenta de ' + m.name + ' desactivada.', 'ph-check-circle');
