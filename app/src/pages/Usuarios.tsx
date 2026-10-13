@@ -3,7 +3,6 @@ import { actualizarUsuario, crearUsuario, empresasUsuario, listUsuarios } from '
 import { mapMember, toRolEmpresa } from '../api/mappers';
 import { Dialog, Icon, Select } from '../components/ui';
 import { ROLE_DOCS, ROLES } from '../data/org';
-import type { RolEmpresa } from '../api/types';
 import type { Member, Role } from '../data/types';
 import { initials } from '../lib/format';
 import { useViewport } from '../hooks/useViewport';
@@ -52,6 +51,10 @@ export default function Usuarios() {
   const saveEdit = async () => {
     if (!editing || editing.m.id === undefined || busy) return;
     const { m, role, ids, personal, telegram } = editing;
+<<<<<<< HEAD
+=======
+    const memberId = m.id as number;
+>>>>>>> 9e9eb3b72ca9104bdf764692bca092365df22da4
     setBusy(true);
     try {
       const body: Parameters<typeof actualizarUsuario>[2] = {};
@@ -60,13 +63,21 @@ export default function Usuarios() {
       if (telegram !== m.telegram) body.puede_gestionar_telegram = telegram;
 
       const patchPromise = Object.keys(body).length
+<<<<<<< HEAD
         ? actualizarUsuario(m.id, Number(co.id), body)
+=======
+        ? actualizarUsuario(memberId, Number(co.id), body)
+>>>>>>> 9e9eb3b72ca9104bdf764692bca092365df22da4
         : Promise.resolve();
 
       const gestionableIds = ids.filter((id) => gestionables.includes(id)).map(Number);
       const orgPromise =
         orgs.length > 1
+<<<<<<< HEAD
           ? empresasUsuario(m.id, Number(co.id), gestionableIds)
+=======
+          ? empresasUsuario(memberId, Number(co.id), gestionableIds)
+>>>>>>> 9e9eb3b72ca9104bdf764692bca092365df22da4
           : Promise.resolve();
 
       await Promise.all([patchPromise, orgPromise]);
@@ -83,10 +94,18 @@ export default function Usuarios() {
   const toggleActive = async () => {
     if (!editing || editing.m.id === undefined || busy) return;
     const { m } = editing;
+<<<<<<< HEAD
     const newActive = m.acc !== 'Activa';
     setBusy(true);
     try {
       await actualizarUsuario(m.id, Number(co.id), { activo: newActive });
+=======
+    const memberId = m.id as number;
+    const newActive = m.acc !== 'Activa';
+    setBusy(true);
+    try {
+      await actualizarUsuario(memberId, Number(co.id), { activo: newActive });
+>>>>>>> 9e9eb3b72ca9104bdf764692bca092365df22da4
       setEditing(null);
       setTick((t) => t + 1);
       showToast(newActive ? 'Cuenta de ' + m.name + ' reactivada.' : 'Cuenta de ' + m.name + ' desactivada.', 'ph-check-circle');
