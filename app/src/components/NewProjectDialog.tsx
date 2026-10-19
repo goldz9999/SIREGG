@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import * as endpoints from '../api/endpoints';
 import { useApp } from '../state/AppState';
+import { currencySymbol } from '../lib/format';
 import { Dialog, Icon } from './ui';
 
 /** Crea un proyecto o pedido; con `forId`, además asigna ese gasto a él. */
@@ -46,7 +47,7 @@ export default function NewProjectDialog({ forId, onClose }: { forId?: string; o
         <input id="np-client" className="input" value={client} onChange={(e) => setClient(e.target.value)} />
       </div>
       <div className="field">
-        <label htmlFor="np-budget">Presupuesto en S/ (opcional)</label>
+        <label htmlFor="np-budget">Presupuesto en {currencySymbol()} (opcional)</label>
         <input id="np-budget" className="input" inputMode="decimal" value={budget} onChange={(e) => setBudget(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') create(); }} />
       </div>
