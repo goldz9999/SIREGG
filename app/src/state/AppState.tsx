@@ -267,8 +267,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const deleteExpense = useCallback((id: string) => {
     const cur = expensesRef.current.find((e) => e.id === id);
     if (!cur) return;
-    const empresaId = cur.empresaId ?? Number(coId);
-    if (!Number.isInteger(empresaId)) return;
+    const empresaId = cur.empresaId ?? (coId === PERSONAL_ID ? undefined : Number(coId));
+    if (empresaId !== undefined && !Number.isInteger(empresaId)) return;
     setOverlay((s) => ({ ...s, [id]: { ...(s[id] || {}), st: 'desc' } }));
     endpoints.rechazar(Number(id), empresaId)
       .then(() => reload())
