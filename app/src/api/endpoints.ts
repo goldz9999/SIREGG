@@ -36,16 +36,16 @@ export const resumenPersonal = () => api<ApiResumen>('/gastos/resumen', { query:
 export const conteosPersonal = () => api<ApiConteos>('/gastos/conteos', { query: PERSONAL });
 export const categorias = (empresaId: number) => api<ApiCategoria[]>('/categorias', { query: { empresa_id: empresaId } });
 
-const accion = (id: number, empresaId: number, ruta: string) =>
+const accion = (id: number, empresaId: number | undefined, ruta: string) =>
   api<unknown>('/gastos/' + id + '/' + ruta, { method: 'PATCH', query: { empresa_id: empresaId } });
-export const patchGasto = (id: number, empresaId: number, body: PatchBody) =>
+export const patchGasto = (id: number, empresaId: number | undefined, body: PatchBody) =>
   api<unknown>('/gastos/' + id, { method: 'PATCH', body, query: { empresa_id: empresaId } });
 /** Gasto completo (comprobantes, pagos y evidencias con su hora y URL firmada). */
-export const getGasto = (id: number, empresaId: number) => api<ApiGasto>('/gastos/' + id, { query: { empresa_id: empresaId } });
-export const confirmarConfianza = (id: number, empresaId: number) => accion(id, empresaId, 'confirmar-confianza');
-export const confirmarDuplicado = (id: number, empresaId: number) => accion(id, empresaId, 'confirmar-duplicado');
-export const descartarDuplicado = (id: number, empresaId: number) => accion(id, empresaId, 'descartar-duplicado');
-export const rechazar = (id: number, empresaId: number) => accion(id, empresaId, 'rechazar');
+export const getGasto = (id: number, empresaId?: number) => api<ApiGasto>('/gastos/' + id, { query: { empresa_id: empresaId } });
+export const confirmarConfianza = (id: number, empresaId?: number) => accion(id, empresaId, 'confirmar-confianza');
+export const confirmarDuplicado = (id: number, empresaId?: number) => accion(id, empresaId, 'confirmar-duplicado');
+export const descartarDuplicado = (id: number, empresaId?: number) => accion(id, empresaId, 'descartar-duplicado');
+export const rechazar = (id: number, empresaId?: number) => accion(id, empresaId, 'rechazar');
 
 export interface NuevoUsuario { nombre: string; email: string; password: string; rol_empresa: RolEmpresa; puede_registrar_personal?: boolean; empresa_ids?: number[] }
 export const listUsuarios = (empresaId: number) => api<ApiUsuarioLista[]>('/usuarios', { query: { empresa_id: empresaId } });
