@@ -6,16 +6,19 @@ import './styles/base.css';
 import './styles/theme.css';
 import './styles/app.css';
 import Layout from './components/Layout';
+import Boleta from './components/Boleta';
 import Categorias from './pages/Categorias';
 import Comprobantes from './pages/Comprobantes';
 import { ConfigEmpresa, ConfigPersonal } from './pages/Configuracion';
 import Dashboard from './pages/Dashboard';
 import Gastos from './pages/Gastos';
+import Ingresos from './pages/Ingresos';
 import Login, { NoCompanies } from './pages/Login';
 import Proveedores from './pages/Proveedores';
 import Proyectos from './pages/Proyectos';
 import Reportes from './pages/Reportes';
 import Revision from './pages/Revision';
+import Soporte from './pages/Soporte';
 import Telegram from './pages/Telegram';
 import Usuarios from './pages/Usuarios';
 import { AppStateProvider, aplicarTemaInicial, useApp } from './state/AppState';
@@ -42,6 +45,8 @@ function Gate() {
             <Route path="gastos" element={<Gastos />}>
               <Route path=":id" element={null} />
             </Route>
+            <Route path="gastos/:id/boleta" element={<Boleta />} />
+            <Route path="ingresos" element={<Ingresos />} />
             <Route path="comprobantes" element={<Comprobantes />} />
             <Route path="proveedores" element={<Proveedores />} />
             <Route path="proyectos" element={<Proyectos />} />
@@ -51,6 +56,7 @@ function Gate() {
             <Route path="empresa" element={<ConfigEmpresa />} />
             <Route path="personal" element={<ConfigPersonal />} />
             <Route path="telegram" element={<Telegram />} />
+            <Route path="soporte" element={<Soporte />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
         </Routes>

@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { buildDashboard, CHART_H } from '../data/dashboard';
-import { money } from '../lib/format';
+import { fd, money } from '../lib/format';
 import { useViewport } from '../hooks/useViewport';
 import { useApp } from '../state/AppState';
 import { CountUp, Icon, TitleIcon } from '../components/ui';
 
 export default function Dashboard() {
-  const { co, pendingCount, resumen, expenses } = useApp();
+  const { co, personal, pendingCount, resumen, expenses, ganancia, canSeeFinances } = useApp();
   const navigate = useNavigate();
   const { isWide } = useViewport();
   const d = useMemo(() => buildDashboard(co, resumen, expenses), [co, resumen, expenses]);
@@ -90,6 +90,57 @@ export default function Dashboard() {
         </section>
       </div>
 
+      {canSeeFinances && ganancia && (
+        <section data-a="1" className="panel" style={{ padding: 20, gap: 16 }}>
+          <div className="row wrap" style={{ justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+            <div className="row" style={{ gap: 10, alignItems: 'center' }}>
+              <span className="icon-tile" style={{ width: 34, height: 34, borderRadius: 8, background: 'var(--color-accent-100)', color: 'var(--color-accent)' }}>
+                <Icon n="ph-trend-up" style={{ fontSize: 20 }} />
+              </span>
+              <div className="stack" style={{ gap: 2 }}>
+                <h3 style={{ fontSize: 16, margin: 0, fontWeight: 600 }}>Balance y ganancia del mes</h3>
+                <span className="muted" style={{ fontSize: 12.5 }}>
+                  {ganancia.ultimoIngresoFecha ? `Último ingreso: ${fd(new Date(ganancia.ultimoIngresoFecha + 'T12:00:00'))}` : 'Sin ingresos registrados este mes'}
+                </span>
+              </div>
+            </div>
+            <button className="btn btn-ghost" onClick={() => navigate('/ingresos')} style={{ fontSize: 13 }}>
+              Ver detalle de ingresos <Icon n="ph-arrow-right" />
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, paddingTop: 6 }}>
+            <div className="stack" style={{ gap: 4 }}>
+              <span className="muted" style={{ fontSize: 12.5 }}>Ingresos totales</span>
+              <span className="num" style={{ fontSize: 22, fontWeight: 600, color: 'var(--color-accent)' }}>
+                <CountUp value={ganancia.totalIngresos} />
+              </span>
+            </div>
+            <div className="stack" style={{ gap: 4 }}>
+              <span className="muted" style={{ fontSize: 12.5 }}>{personal ? 'Total de gastos' : 'Gastos empresariales'}</span>
+              <span className="num" style={{ fontSize: 22, fontWeight: 600 }}>
+                <CountUp value={ganancia.totalGastos} />
+              </span>
+            </div>
+            <div className="stack" style={{ gap: 4 }}>
+              <span className="muted" style={{ fontSize: 12.5 }}>Ganancia neta</span>
+              <span className="num" style={{ fontSize: 22, fontWeight: 600, color: ganancia.ganancia >= 0 ? 'var(--color-accent)' : 'var(--color-accent-2)' }}>
+                <CountUp value={ganancia.ganancia} />
+              </span>
+            </div>
+            <div className="stack" style={{ gap: 4 }}>
+              <span className="muted" style={{ fontSize: 12.5 }}>Margen operativo</span>
+              <span className="row" style={{ gap: 6, alignItems: 'baseline' }}>
+                <span className="num" style={{ fontSize: 22, fontWeight: 600, color: ganancia.margen >= 0 ? 'var(--color-accent)' : 'var(--color-accent-2)' }}>
+                  {ganancia.margen}%
+                </span>
+                <span className="muted" style={{ fontSize: 11.5 }}>sobre ingresos</span>
+              </span>
+            </div>
+          </div>
+        </section>
+      )}
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 20 }}>
         {d.kpis.map((k) => (
           <div key={k.label} data-a="1" className="panel lift" style={{ gap: 6, padding: '18px 18px 12px' }}>
@@ -134,6 +185,30 @@ export default function Dashboard() {
               <span>Empresarial <strong style={{ fontWeight: 600 }}>{d.bizPct}</strong></span><span className="muted">Personal {d.perPct}</span>
             </div>
             <div className="row bar-track" style={{ height: 8, borderRadius: 4 }}><div data-grow="x" className="grad-bar" style={{ width: d.bizPct, height: '100%' }} /></div>
+          </div>
+
+          <div className="stack" style={{ gap: 8, paddingTop: 12, boxShadow: '0 -1px 0 var(--line)' }}>
+            <div className="row wrap" style={{ justifyContent: 'space-between', fontSize: 13, gap: 8 }}>
+              <span className="row" style={{ gap: 6, alignItems: 'center' }}>
+                <span className="dot" style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-accent)' }} />
+                <span>Prioritario <strong style={{ fontWeight: 600 }}>{d.prioPct}</strong></span>
+                <span className="muted" style={{ fontSize: 12 }}>({money(d.prioAmt)})</span>
+              </span>
+              <span className="row muted" style={{ gap: 6, alignItems: 'center', fontSize: 13 }}>
+                <span className="dot" style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-neutral-500)' }} />
+                <span>Adicional <strong style={{ fontWeight: 500, color: 'inherit' }}>{d.adicPct}</strong></span>
+                <span style={{ fontSize: 12 }}>({money(d.adicAmt)})</span>
+              </span>
+            </div>
+            <div className="row bar-track" style={{ height: 8, borderRadius: 4, overflow: 'hidden' }}>
+              <div data-grow="x" style={{ width: d.prioPct, height: '100%', background: 'var(--color-accent)', borderRadius: '4px 0 0 4px', transition: 'width .3s' }} />
+              <div data-grow="x" style={{ width: d.adicPct, height: '100%', background: 'var(--color-neutral-400)', borderRadius: '0 4px 4px 0', transition: 'width .3s' }} />
+            </div>
+            {d.sinPrioAmt > 0 && (
+              <div className="row muted" style={{ fontSize: 11.5, justifyContent: 'flex-end' }}>
+                <span>Sin clasificar: {money(d.sinPrioAmt)}</span>
+              </div>
+            )}
           </div>
         </section>
 

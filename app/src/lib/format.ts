@@ -1,11 +1,17 @@
-const SYMBOL = { PEN: 'S/', USD: 'US$' } as const;
+const SYMBOL: Record<string, string> = { PEN: 'S/', USD: 'US$' };
 let currency: keyof typeof SYMBOL = 'PEN';
 /** Moneda de la organización activa (la fija AppState). */
 export const setCurrency = (c: keyof typeof SYMBOL) => { currency = c; };
-export const currencySymbol = () => SYMBOL[currency];
+export const currencySymbol = (c?: string | null) => (c && c in SYMBOL ? SYMBOL[c] : SYMBOL[currency]);
 
 export const money = (n: number) =>
   SYMBOL[currency] + ' ' + n.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/** Formatea un monto en una moneda explícita (p. ej. el monto original en USD junto al convertido). */
+export const moneyIn = (n: number, m?: string | null) => {
+  const sym = currencySymbol(m);
+  return sym + ' ' + n.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
 
 export const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'set', 'oct', 'nov', 'dic'];
 

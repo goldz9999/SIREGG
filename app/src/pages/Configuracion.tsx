@@ -94,7 +94,15 @@ export function ConfigEmpresa() {
           <div className="field">
             <label htmlFor="cfg-currency">Moneda</label>
             <Select id="cfg-currency" value={form.currency} disabled={!canEdit} onChange={set('currency')} options={MONEDAS.map((m) => ({ v: m.value, l: m.label }))} />
-            <span className="muted" style={{ fontSize: 12 }}>Con la que se muestran los montos de esta organización.</span>
+            <span className="muted" style={{ fontSize: 12 }}>Moneda base oficial. Los comprobantes o pagos que ingresen en otra moneda se convertirán automáticamente usando el tipo de cambio oficial.</span>
+            {form.currency !== saved.currency && (
+              <div role="status" className="row" style={{ gap: 8, padding: '8px 10px', background: 'var(--color-accent-2-100)', borderRadius: 8, marginTop: 4 }}>
+                <Icon n="ph-warning-circle" style={{ color: 'var(--color-accent-2-700)', fontSize: 16, flexShrink: 0 }} />
+                <span style={{ fontSize: 12, color: 'var(--color-accent-2-900)' }}>
+                  Cambiarás la moneda base a <strong>{form.currency}</strong>. Los nuevos gastos convertirán automáticamente a esta moneda.
+                </span>
+              </div>
+            )}
           </div>
         </div>
         {!canEdit && <span className="muted" style={{ fontSize: 12 }}>Solo el propietario o un administrador puede cambiar estos datos.</span>}
@@ -115,7 +123,7 @@ export function ConfigEmpresa() {
 const MAX_FOTO = 2 * 1024 * 1024;
 
 export function ConfigPersonal() {
-  const { theme, setTheme, user, companies: all, logout, showToast } = useApp();
+  const { theme, setTheme, user, companies: all, logout, showToast, personalCurrency, setPersonalCurrency } = useApp();
   const { applyProfile } = useAuth();
   const companies = all.filter((c) => c.kind === 'Empresa');
   const [name, setName] = useState(user.name);
@@ -233,6 +241,24 @@ export function ConfigPersonal() {
         </div>
         {pwdError && <span style={{ fontSize: 12, color: 'var(--color-accent-2-700)' }}>{pwdError}</span>}
         <div><button className="btn btn-primary" onClick={savePassword} disabled={!canSavePwd}><Icon n="ph-lock-key" /> {busy === 'clave' ? 'Guardando…' : 'Cambiar contraseña'}</button></div>
+      </div>
+      <div data-a="1" className="panel" style={{ gap: 14 }}>
+        <h2 className="panel-title-lg">Moneda para gastos personales</h2>
+        <div className="field" style={{ maxWidth: 360 }}>
+          <label htmlFor="cfg-personal-currency">Moneda base</label>
+          <Select
+            id="cfg-personal-currency"
+            value={personalCurrency}
+            onChange={(v) => {
+              setPersonalCurrency(v as Moneda);
+              showToast('Moneda personal actualizada a ' + v, 'ph-check-circle');
+            }}
+            options={MONEDAS.map((m) => ({ v: m.value, l: m.label }))}
+          />
+          <span className="muted" style={{ fontSize: 12 }}>
+            Moneda principal en el espacio de gastos personales. Los gastos e ingresos se mostrarán y convertirán en base a esta moneda.
+          </span>
+        </div>
       </div>
       <div data-a="1" className="panel" style={{ gap: 14 }}>
         <h2 className="panel-title-lg">Apariencia</h2>

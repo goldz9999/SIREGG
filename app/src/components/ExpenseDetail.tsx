@@ -1,19 +1,21 @@
 import { Fragment, useEffect, useState, type CSSProperties, type MutableRefObject } from 'react';
-import { getGasto } from '../api/endpoints';
+import * as endpoints from '../api/endpoints';
 import { mapGasto } from '../api/mappers';
-import type { Evidence } from '../data/types';
+import type { Evidence, ExpenseItem } from '../data/types';
+import { getExpenseItems, groupItemsByPriority, saveExpenseItems } from '../data/items';
 import { compararDuplicado, esComprobante, esPago } from '../data/duplicados';
 import { GROUP_CLS, KIND, PAYS, STAT } from '../data/expenses';
 import type { Expense, ExpenseType, Status } from '../data/types';
-import { currencySymbol, fd, money, uniq } from '../lib/format';
+import { currencySymbol, fd, money, moneyIn, uniq } from '../lib/format';
 import { useApp } from '../state/AppState';
+import Boleta from './Boleta';
 import FilePreview from './FilePreview';
 import NewProjectDialog from './NewProjectDialog';
-import { Icon, Select } from './ui';
+import { Dialog, Icon, Select } from './ui';
 
 const NO_PROJECT = 'Sin proyecto';
 
-interface Draft { desc: string; amt: string; cat: string; type: ExpenseType; proj: string; prov: string; ruc: string; pay: string }
+interface Draft { desc: string; amt: string; cat: string; type: ExpenseType; proj: string; prov: string; ruc: string; pay: string; tc: string }
 
 const NO_PAY = 'Sin medio de pago';
 
@@ -55,7 +57,7 @@ export default function ExpenseDetail({ expense: base, done, onDone, onResolved,
     let alive = true;
     const empresaId = base.empresaId ?? Number(co.id);
     if (!Number.isInteger(empresaId)) return;
-    getGasto(Number(base.id), empresaId)
+    endpoints.getGasto(Number(base.id), empresaId)
       .then((g) => { if (alive) setEvFull(mapGasto(g).ev); })
       .catch(() => { /* se queda con los archivos de la lista */ });
     return () => { alive = false; };
@@ -65,7 +67,7 @@ export default function ExpenseDetail({ expense: base, done, onDone, onResolved,
   useEffect(() => {
     if (!base.dupOf) return;
     let alive = true;
-    getGasto(Number(base.dupOf), base.empresaId ?? Number(co.id))
+    endpoints.getGasto(Number(base.dupOf), base.empresaId ?? Number(co.id))
       .then((g) => { if (alive) setOrigEv(mapGasto(g).ev); })
       .catch(() => { /* usa los archivos de la lista */ });
     return () => { alive = false; };
@@ -76,6 +78,32 @@ export default function ExpenseDetail({ expense: base, done, onDone, onResolved,
   // Vista ampliada de un archivo del gasto original (comparación de duplicados).
   const [origPreview, setOrigPreview] = useState<number | null>(null);
   const [newProj, setNewProj] = useState(false);
+  const [showBoletaModal, setShowBoletaModal] = useState(false);
+  const [itemsList, setItemsList] = useState<ExpenseItem[]>(() => getExpenseItems(e));
+
+  useEffect(() => {
+    setItemsList(getExpenseItems(e));
+  }, [e]);
+
+  const cambiarPrioridadItem = (idx: number, prio: 'prioritario' | 'adicional' | null) => {
+    const updated = itemsList.map((it, i) => (i === idx ? { ...it, prioridad: prio } : it));
+    setItemsList(updated);
+    saveExpenseItems(e.id, updated);
+    const it = itemsList[idx];
+    if (it && it.id != null) {
+      endpoints.actualizarPrioridadItem(Number(e.id), it.id, prio, e.empresaId ?? undefined).catch(() => {});
+    } else {
+      endpoints.actualizarPrioridadGasto(Number(e.id), prio, e.empresaId ?? undefined).catch(() => {});
+    }
+    showToast(
+      prio === 'prioritario'
+        ? 'Marcado como Prioritario'
+        : prio === 'adicional'
+        ? 'Marcado como Adicional'
+        : 'Prioridad removida',
+      prio === 'prioritario' ? 'ph-check-circle' : 'ph-tag'
+    );
+  };
 
   // Categorías de la empresa del gasto (en "Gastos personales" se cargan las de todas).
   const cats = uniq([...categories.filter((c) => e.empresaId == null || c.empresa_id === e.empresaId).map((c) => c.nombre), e.cat]);
@@ -88,7 +116,10 @@ export default function ExpenseDetail({ expense: base, done, onDone, onResolved,
   const canCreateProject = CAN_CREATE_PROJECT.includes(co.role);
   const isErr = e.st === 'err';
 
-  const startEdit = () => setDraft({ desc: e.desc, amt: String(e.amt), cat: e.cat, type: e.type, proj: e.proj || NO_PROJECT, prov: e.prov, ruc: e.ruc, pay: e.pay || NO_PAY });
+  const startEdit = () => setDraft({
+    desc: e.desc, amt: String(e.amt), cat: e.cat, type: e.type, proj: e.proj || NO_PROJECT, prov: e.prov, ruc: e.ruc, pay: e.pay || NO_PAY,
+    tc: e.tipoCambio != null ? String(e.tipoCambio) : '',
+  });
   const confirm = () => {
     const p: Partial<Expense> = { st: 'ok' };
     if (draft) {
@@ -97,6 +128,10 @@ export default function ExpenseDetail({ expense: base, done, onDone, onResolved,
       const ruc = draft.ruc.trim();
       if (ruc && !/^[0-9]{11}$/.test(ruc)) { showToast('El RUC debe tener 11 dígitos.', 'ph-warning-circle'); return; }
       if (ruc && !draft.prov.trim()) { showToast('Indica el proveedor al que pertenece el RUC.', 'ph-warning-circle'); return; }
+      if (draft.tc !== undefined && draft.tc.trim() !== '') {
+        const tc = parseFloat(draft.tc.replace(/[^0-9.]/g, ''));
+        if (tc > 0) p.tipoCambio = tc;
+      }
       Object.assign(p, {
         desc: draft.desc, amt: a, cat: draft.cat, type: draft.type, proj: draft.proj === NO_PROJECT ? '' : draft.proj,
         prov: draft.prov.trim(), ruc, ...(draft.pay !== NO_PAY ? { pay: draft.pay } : {}),
@@ -156,6 +191,7 @@ export default function ExpenseDetail({ expense: base, done, onDone, onResolved,
   const fields: [string, string][] = [
     ['Descripción', e.desc || '—'], ['Proveedor', e.prov || '—'], ['RUC', e.ruc || '—'], ['Fecha', fd(e.date) + ' ' + e.date.getFullYear()],
     ['Categoría', e.cat], ['Tipo', e.type], ['Proyecto o pedido', e.proj || '—'], ['Medio de pago', e.pay || '—'], ['Registró', e.user || '—'],
+    ...(e.montoOriginal != null && e.tipoCambio != null ? [['Monto y TC original', `${moneyIn(e.montoOriginal, e.monedaOriginal)} (TC: ${e.tipoCambio}${e.tipoCambioFuente ? ` · ${e.tipoCambioFuente}` : ''})`] as [string, string]] : []),
     ...(orgName ? [['Organización', orgName] as [string, string]] : []),
   ];
   const set = (k: keyof Draft) => (v: string) => setDraft((d) => (d ? { ...d, [k]: v } : d));
@@ -196,6 +232,11 @@ export default function ExpenseDetail({ expense: base, done, onDone, onResolved,
           <div className="stack" style={{ alignItems: 'flex-end', gap: 4 }}>
             <span className="muted" style={{ fontSize: 12.5 }}>Monto</span>
             <span className="num nowrap" style={{ fontSize: 'clamp(32px,3.6vw,44px)', fontWeight: 600, letterSpacing: '-.035em', lineHeight: 1 }}>{money(e.amt)}</span>
+            {e.montoOriginal != null && e.tipoCambio != null && (
+              <span className="muted nowrap" style={{ fontSize: 12 }}>
+                Original: {moneyIn(e.montoOriginal, e.monedaOriginal)} · TC {e.tipoCambio}{e.tipoCambioFuente ? ` (${e.tipoCambioFuente.toUpperCase()})` : ''}
+              </span>
+            )}
             <span className="muted" style={{ fontSize: 12.5 }}>{e.pay || 'Sin medio de pago'}</span>
           </div>
         </div>
@@ -207,6 +248,11 @@ export default function ExpenseDetail({ expense: base, done, onDone, onResolved,
         )}
         <div className="row wrap" style={{ gap: 8, paddingTop: 16, boxShadow: '0 -1px 0 var(--line)' }}>
           {actions.map((a) => <button key={a.label} className={a.cls} onClick={a.run} style={{ color: a.color }}><Icon n={a.icon} /> {a.label}</button>)}
+          {!draft && (
+            <button className="btn btn-secondary" onClick={() => setShowBoletaModal(true)}>
+              <Icon n="ph-receipt" /> Ver boleta
+            </button>
+          )}
           {!draft && (
             confirmDelete ? (
               <div className="row wrap" style={{ gap: 8, marginLeft: 'auto' }}>
@@ -327,43 +373,204 @@ export default function ExpenseDetail({ expense: base, done, onDone, onResolved,
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,380px),1fr))', gap: 20, alignItems: 'start' }}>
-        <div data-a="1" className="panel" style={{ gap: 14 }}>
-          <h3 className="panel-title">Datos del gasto</h3>
-          {!draft && e.st === 'ok' && (pedidos.length > 0 || canCreateProject) && (
-            <div className="stack" style={{ gap: 8, padding: 14, borderRadius: 12, background: 'var(--fill)', border: '1px solid var(--line)' }}>
-              <span className="row" style={{ gap: 8, fontSize: 13, fontWeight: 500 }}><Icon n="ph-folders" style={{ fontSize: 16, color: 'var(--color-accent)' }} />Proyecto o pedido</span>
-              <div className="row wrap" style={{ gap: 8 }}>
-                <Select label="Proyecto o pedido" value={e.proj || NO_PROJECT} options={projOpts.map((v) => ({ v }))} style={{ flex: '1 1 200px', minWidth: 0, width: 'auto' }}
-                  onChange={(v) => {
-                    patchExpense(e.id, { proj: v === NO_PROJECT ? '' : v });
-                    showToast(v === NO_PROJECT ? 'Gasto sin proyecto asignado.' : 'Asignado a ' + v + '.', 'ph-folders');
-                  }} />
-                {canCreateProject && <button className="btn btn-secondary" onClick={() => setNewProj(true)}><Icon n="ph-plus" /> Nuevo</button>}
-              </div>
-              <span className="muted" style={{ fontSize: 12.5 }}>Asigna el gasto para sumarlo al costo del proyecto o pedido.</span>
-            </div>
-          )}
-          {!draft ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: 'var(--space-3) var(--space-4)' }}>
-              {fields.map(([l, v]) => (
-                <div key={l} className="stack" style={{ gap: 2 }}>
-                  <span className="muted" style={{ fontSize: 12.5 }}>{l}</span>
-                  <span style={{ fontSize: 15, color: v === 'Falta' ? 'var(--color-accent-2-700)' : undefined }}>{v}</span>
+        <div className="stack" style={{ gap: 20 }}>
+          <div data-a="1" className="panel" style={{ gap: 14 }}>
+            <h3 className="panel-title">Datos del gasto</h3>
+            {!draft && e.st === 'ok' && (pedidos.length > 0 || canCreateProject) && (
+              <div className="stack" style={{ gap: 8, padding: 14, borderRadius: 12, background: 'var(--fill)', border: '1px solid var(--line)' }}>
+                <span className="row" style={{ gap: 8, fontSize: 13, fontWeight: 500 }}><Icon n="ph-folders" style={{ fontSize: 16, color: 'var(--color-accent)' }} />Proyecto o pedido</span>
+                <div className="row wrap" style={{ gap: 8 }}>
+                  <Select label="Proyecto o pedido" value={e.proj || NO_PROJECT} options={projOpts.map((v) => ({ v }))} style={{ flex: '1 1 200px', minWidth: 0, width: 'auto' }}
+                    onChange={(v) => {
+                      patchExpense(e.id, { proj: v === NO_PROJECT ? '' : v });
+                      showToast(v === NO_PROJECT ? 'Gasto sin proyecto asignado.' : 'Asignado a ' + v + '.', 'ph-folders');
+                    }} />
+                  {canCreateProject && <button className="btn btn-secondary" onClick={() => setNewProj(true)}><Icon n="ph-plus" /> Nuevo</button>}
                 </div>
-              ))}
+                <span className="muted" style={{ fontSize: 12.5 }}>Asigna el gasto para sumarlo al costo del proyecto o pedido.</span>
+              </div>
+            )}
+            {!draft ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: 'var(--space-3) var(--space-4)' }}>
+                {fields.map(([l, v]) => (
+                  <div key={l} className="stack" style={{ gap: 2 }}>
+                    <span className="muted" style={{ fontSize: 12.5 }}>{l}</span>
+                    <span style={{ fontSize: 15, color: v === 'Falta' ? 'var(--color-accent-2-700)' : undefined }}>{v}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: 'var(--space-3)' }}>
+                {textInput('Descripción', 'desc', 2)}
+                {textInput('Monto (' + currencySymbol() + ')', 'amt', 1, { inputMode: 'decimal' })}
+                {selInput('Medio de pago', 'pay', payOpts)}
+                {textInput('Proveedor', 'prov')}
+                {textInput('RUC del proveedor', 'ruc', 1, { inputMode: 'numeric', maxLength: 11, placeholder: '11 dígitos' })}
+                {selInput('Categoría', 'cat', cats)}
+                {selInput('Tipo', 'type', typeOpts)}
+                {(e.montoOriginal != null || draft?.tc) && textInput('Tipo de cambio (TC)', 'tc', 1, { inputMode: 'decimal', placeholder: 'Ej: 3.75' })}
+                {pedidos.length > 0 && selInput('Proyecto o pedido', 'proj', projOpts, 2)}
+              </div>
+            )}
+          </div>
+
+          {/* Desglose de productos / gastos como lista con precio y total debajo */}
+          <div data-a="1" className="panel" style={{ gap: 14 }}>
+            <div className="row wrap" style={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <div className="row" style={{ gap: 8, alignItems: 'center' }}>
+                <span className="icon-tile" style={{ width: 28, height: 28, borderRadius: 6, background: 'var(--color-accent-100)', color: 'var(--color-accent)' }}>
+                  <Icon n="ph-list-bullets" style={{ fontSize: 16 }} />
+                </span>
+                <h3 className="panel-title" style={{ margin: 0 }}>Desglose de productos</h3>
+              </div>
+              <span className="muted" style={{ fontSize: 12.5 }}>
+                {itemsList.length} {itemsList.length === 1 ? 'producto' : 'productos'}
+              </span>
             </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: 'var(--space-3)' }}>
-              {textInput('Descripción', 'desc', 2)}
-              {textInput('Monto (' + currencySymbol() + ')', 'amt', 1, { inputMode: 'decimal' })}
-              {selInput('Medio de pago', 'pay', payOpts)}
-              {textInput('Proveedor', 'prov')}
-              {textInput('RUC del proveedor', 'ruc', 1, { inputMode: 'numeric', maxLength: 11, placeholder: '11 dígitos' })}
-              {selInput('Categoría', 'cat', cats)}
-              {selInput('Tipo', 'type', typeOpts)}
-              {pedidos.length > 0 && selInput('Proyecto o pedido', 'proj', projOpts, 2)}
+
+            <div className="stack" style={{ gap: 8 }}>
+              {(() => {
+                const prioSummary = groupItemsByPriority(itemsList, e.amt);
+                return (
+                  <>
+                    {itemsList.map((it, idx) => {
+                      const costo = it.costo ?? (e.amt / (itemsList.length || 1));
+                      const subtotalIt = costo * (it.cantidad || 1);
+                      return (
+                        <div
+                          key={idx}
+                          className="row"
+                          style={{
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            padding: '10px 14px',
+                            background: 'var(--fill)',
+                            borderRadius: 10,
+                            border: '1px solid var(--line)',
+                            fontSize: 13.5,
+                          }}
+                        >
+                          <div className="row wrap" style={{ gap: 10, alignItems: 'center' }}>
+                            <span
+                              className="dot"
+                              style={{
+                                width: 7,
+                                height: 7,
+                                borderRadius: '50%',
+                                background:
+                                  it.prioridad === 'prioritario'
+                                    ? 'var(--color-accent)'
+                                    : it.prioridad === 'adicional'
+                                    ? 'var(--color-neutral-600)'
+                                    : 'var(--color-neutral-400)',
+                              }}
+                            />
+                            <div className="stack" style={{ gap: 4 }}>
+                              <span style={{ fontWeight: 500 }}>{it.producto}</span>
+                              <div className="row" style={{ gap: 6, alignItems: 'center' }}>
+                                <select
+                                  className="input"
+                                  style={{
+                                    fontSize: 11,
+                                    padding: '2px 6px',
+                                    height: 24,
+                                    borderRadius: 6,
+                                    background:
+                                      it.prioridad === 'prioritario'
+                                        ? 'var(--color-accent-100)'
+                                        : it.prioridad === 'adicional'
+                                        ? 'var(--color-neutral-200)'
+                                        : 'transparent',
+                                    color:
+                                      it.prioridad === 'prioritario'
+                                        ? 'var(--color-accent)'
+                                        : it.prioridad === 'adicional'
+                                        ? 'var(--color-neutral-800)'
+                                        : 'var(--color-neutral-600)',
+                                    fontWeight: 600,
+                                    border: '1px solid var(--line)',
+                                    cursor: 'pointer',
+                                  }}
+                                  value={it.prioridad || ''}
+                                  onChange={(ev) => {
+                                    const v = ev.target.value as 'prioritario' | 'adicional' | '';
+                                    cambiarPrioridadItem(idx, v || null);
+                                  }}
+                                  title="Clasificar prioridad del producto"
+                                >
+                                  <option value="">Sin clasificar</option>
+                                  <option value="prioritario">Prioritario</option>
+                                  <option value="adicional">Adicional</option>
+                                </select>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="stack" style={{ alignItems: 'flex-end', gap: 2 }}>
+                            <span className="num" style={{ fontWeight: 600, fontSize: 14 }}>
+                              {money(subtotalIt)}
+                            </span>
+                            {it.cantidad && it.cantidad > 1 && (
+                              <span className="muted" style={{ fontSize: 11 }}>
+                                {it.cantidad} × {money(costo)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {prioSummary.hasClassification && (
+                      <div
+                        className="row wrap"
+                        style={{
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '8px 12px',
+                          background: 'var(--fill)',
+                          borderRadius: 8,
+                          fontSize: 12.5,
+                          border: '1px dashed var(--line)',
+                        }}
+                      >
+                        <span className="row" style={{ gap: 6, alignItems: 'center' }}>
+                          <span className="tag tag-accent" style={{ fontSize: 10.5, padding: '1px 6px' }}>Prioritarios</span>
+                          <strong className="num">{money(prioSummary.subtotalPrioritarios)}</strong>
+                        </span>
+                        <span className="row" style={{ gap: 6, alignItems: 'center' }}>
+                          <span className="tag tag-neutral" style={{ fontSize: 10.5, padding: '1px 6px' }}>Adicionales</span>
+                          <strong className="num">{money(prioSummary.subtotalAdicionales)}</strong>
+                        </span>
+                        {prioSummary.subtotalSinClasificar > 0 && (
+                          <span className="muted" style={{ fontSize: 11.5 }}>
+                            Sin clasificar: {money(prioSummary.subtotalSinClasificar)}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+
+              {/* Total debajo de los productos */}
+              <div
+                className="row"
+                style={{
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '12px 14px',
+                  background: 'var(--fill-strong)',
+                  borderRadius: 10,
+                  marginTop: 6,
+                  borderTop: '2px solid var(--line)',
+                }}
+              >
+                <strong style={{ fontSize: 14 }}>Total de los productos:</strong>
+                <span className="num" style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-accent)' }}>
+                  {money(itemsList.reduce((s, it) => s + (it.costo != null ? it.costo * (it.cantidad || 1) : 0), 0) || e.amt)}
+                </span>
+              </div>
             </div>
-          )}
+          </div>
         </div>
 
         <div className="stack" style={{ gap: 20 }}>
@@ -424,6 +631,11 @@ export default function ExpenseDetail({ expense: base, done, onDone, onResolved,
         <FilePreview expense={orig} index={origPreview} onClose={() => setOrigPreview(null)} />
       )}
       {newProj && <NewProjectDialog forId={e.id} onClose={() => setNewProj(false)} />}
+      {showBoletaModal && (
+        <Dialog onClose={() => setShowBoletaModal(false)} width={880} gap={16}>
+          <Boleta expense={e} onClose={() => setShowBoletaModal(false)} asModal />
+        </Dialog>
+      )}
     </div>
   );
 }

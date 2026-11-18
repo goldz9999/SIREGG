@@ -1,17 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMatch, useNavigate, useSearchParams } from 'react-router-dom';
+import Boleta from '../components/Boleta';
 import ExpenseDetail from '../components/ExpenseDetail';
 import { showRegisterInfo } from '../components/Layout';
-import { Icon, SearchInput, Seg, Select } from '../components/ui';
+import { Dialog, Icon, SearchInput, Seg, Select } from '../components/ui';
 import { ALERT_STATUSES, isPending, PAYS, STAT } from '../data/expenses';
 import { compararDuplicado } from '../data/duplicados';
+import { getExpensePriority } from '../data/items';
 import type { Expense, Status } from '../data/types';
 import { fd, money, uniq } from '../lib/format';
 import { useViewport } from '../hooks/useViewport';
 import { useApp } from '../state/AppState';
 
 type SortKey = 'date' | 'prov' | 'amt';
-const EMPTY_FILTERS = { st: '', cat: '', type: '', pay: '' };
+const EMPTY_FILTERS = { st: '', cat: '', type: '', pay: '', prio: '' };
 const PER_PAGE = 10;
 
 export default function Gastos() {
@@ -80,6 +82,7 @@ function GastosList() {
   const [tab, setTab] = useState<'all' | 'rev' | 'dup'>('all');
   const [sort, setSort] = useState<{ k: SortKey; dir: number }>({ k: 'date', dir: -1 });
   const [page, setPage] = useState(0);
+  const [boletaExpense, setBoletaExpense] = useState<Expense | null>(null);
 
   // A search from the top bar or a provider's "Historial" arrives as ?q=.
   useEffect(() => {
@@ -96,7 +99,16 @@ function GastosList() {
     const r = base.filter((e) =>
       (tab !== 'rev' || isPending(e.st)) &&
       (!qq || (e.desc + ' ' + e.prov + ' ' + e.ruc + ' ' + e.id).toLowerCase().includes(qq)) &&
-      (!f.st || e.st === f.st) && (!f.cat || e.cat === f.cat) && (!f.type || e.type === f.type) && (!f.pay || e.pay === f.pay));
+      (!f.st || e.st === f.st) &&
+      (!f.cat || e.cat === f.cat) &&
+      (!f.type || e.type === f.type) &&
+      (!f.pay || e.pay === f.pay) &&
+      (!f.prio ||
+        (f.prio === 'prioritario'
+          ? getExpensePriority(e) === 'prioritario' || getExpensePriority(e) === 'mixto'
+          : f.prio === 'adicional'
+          ? getExpensePriority(e) === 'adicional' || getExpensePriority(e) === 'mixto'
+          : getExpensePriority(e) === 'sin_clasificar')));
     const { k, dir } = sort;
     return r.slice().sort((a, b) => {
       const x = k === 'amt' ? a.amt - b.amt : k === 'prov' ? a.prov.localeCompare(b.prov) : +a.date - +b.date || +b.id - +a.id;
@@ -107,20 +119,21 @@ function GastosList() {
   const pages = Math.max(1, Math.ceil(rows.length / PER_PAGE));
   const pg = Math.min(page, pages - 1);
   const visible = rows.slice(pg * PER_PAGE, pg * PER_PAGE + PER_PAGE);
-  const hasFilters = !!(q || f.st || f.cat || f.type || f.pay);
+  const hasFilters = !!(q || f.st || f.cat || f.type || f.pay || f.prio);
   const setFilter = (k: keyof typeof EMPTY_FILTERS) => (v: string) => { setF((x) => ({ ...x, [k]: v })); setPage(0); };
   const sortBy = (k: SortKey) => setSort((s) => ({ k, dir: s.k === k ? -s.dir : k === 'prov' ? 1 : -1 }));
   const open = (id: string) => navigate('/gastos/' + id);
 
   const filters = [
     { label: 'Estado', value: f.st, set: setFilter('st'), all: 'Todos los estados', opts: (Object.keys(STAT) as Status[]).map((v) => ({ v, l: STAT[v][0] })) },
+    { label: 'Prioridad', value: f.prio, set: setFilter('prio'), all: 'Todas las prioridades', opts: [{ v: 'prioritario', l: 'Prioritario' }, { v: 'adicional', l: 'Adicional' }, { v: 'sin_clasificar', l: 'Sin clasificar' }] },
     { label: 'Categoría', value: f.cat, set: setFilter('cat'), all: 'Todas las categorías', opts: uniq(expenses.map((e) => e.cat)).sort().map((v) => ({ v })) },
     { label: 'Tipo', value: f.type, set: setFilter('type'), all: 'Personal y empresarial', opts: [{ v: 'Empresarial' }, { v: 'Personal' }] },
     { label: 'Medio de pago', value: f.pay, set: setFilter('pay'), all: 'Todos los medios', opts: PAYS.map((v) => ({ v })) },
   ];
-  const cols: { label: string; k?: SortKey; align?: 'right' }[] = [
+  const cols: { label: string; k?: SortKey; align?: 'right' | 'center' }[] = [
     { label: 'Fecha', k: 'date' }, { label: tab === 'dup' ? 'Detección' : 'Descripción' }, { label: 'Proveedor', k: 'prov' }, { label: 'Categoría' }, { label: 'Tipo' },
-    { label: 'Proyecto' }, { label: 'Medio de pago' }, { label: 'Monto', k: 'amt', align: 'right' }, { label: 'Estado' },
+    { label: 'Proyecto' }, { label: 'Medio de pago' }, { label: 'Monto', k: 'amt', align: 'right' }, { label: 'Estado' }, { label: 'Boleta', align: 'center' },
   ];
   const rowBg = (e: Expense) => (ALERT_STATUSES.includes(e.st) ? 'var(--color-accent-2-100)' : undefined);
   const rowStyle = (e: Expense) => ({
@@ -184,6 +197,19 @@ function GastosList() {
                   <td>{e.pay}</td>
                   <td className="num nowrap" style={{ textAlign: 'right', fontWeight: 600, textDecoration: e.st === 'desc' ? 'line-through' : undefined }}>{money(e.amt)}</td>
                   <td><span className={STAT[e.st][1]}>{STAT[e.st][0]}</span></td>
+                  <td style={{ textAlign: 'center' }}>
+                    <button
+                      className="btn btn-ghost"
+                      title="Ver boleta"
+                      style={{ padding: '4px 8px' }}
+                      onClick={(ev) => {
+                        ev.stopPropagation();
+                        setBoletaExpense(e);
+                      }}
+                    >
+                      <Icon n="ph-receipt" style={{ fontSize: 16 }} />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -198,7 +224,27 @@ function GastosList() {
                 <span style={{ fontWeight: 600, fontSize: 15 }}>{e.desc}</span>
                 <span className="num nowrap" style={{ fontWeight: 600 }}>{money(e.amt)}</span>
               </span>
-              <span className="muted" style={{ fontSize: 13 }}>{e.prov} · {fd(e.date)} · {e.pay}</span>
+              <span className="row" style={{ justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                <span className="muted" style={{ fontSize: 13 }}>{e.prov} · {fd(e.date)} · {e.pay}</span>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  className="row"
+                  style={{ gap: 4, fontSize: 12, color: 'var(--color-accent)', fontWeight: 600, padding: '2px 6px' }}
+                  onClick={(ev) => {
+                    ev.stopPropagation();
+                    setBoletaExpense(e);
+                  }}
+                  onKeyDown={(ev) => {
+                    if (ev.key === 'Enter') {
+                      ev.stopPropagation();
+                      setBoletaExpense(e);
+                    }
+                  }}
+                >
+                  <Icon n="ph-receipt" /> Boleta
+                </span>
+              </span>
               {tab === 'dup' ? deteccionDe(e) : <span className={STAT[e.st][1]}>{STAT[e.st][0]}</span>}
             </button>
           ))}
@@ -215,6 +261,12 @@ function GastosList() {
         <button className="btn btn-secondary btn-icon" aria-label="Página anterior" disabled={pg === 0} onClick={() => setPage(pg - 1)}><Icon n="ph-caret-left" /></button>
         <button className="btn btn-secondary btn-icon" aria-label="Página siguiente" disabled={pg >= pages - 1} onClick={() => setPage(pg + 1)}><Icon n="ph-caret-right" /></button>
       </div>
+
+      {boletaExpense && (
+        <Dialog onClose={() => setBoletaExpense(null)} width={880} gap={16}>
+          <Boleta expense={boletaExpense} onClose={() => setBoletaExpense(null)} asModal />
+        </Dialog>
+      )}
     </div>
   );
 }

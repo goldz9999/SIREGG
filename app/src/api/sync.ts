@@ -12,6 +12,7 @@ export interface PatchBody {
   /** Solo si cambió; null o '' borra el RUC del proveedor. */
   proveedor_ruc?: string | null;
   medio_pago?: MedioPago;
+  tipo_cambio?: number | null;
 }
 
 const MEDIO: Record<string, MedioPago> = { Yape: 'yape', Transferencia: 'transferencia', Efectivo: 'efectivo', Tarjeta: 'tarjeta', Otro: 'otro' };
@@ -60,6 +61,7 @@ export function planSync(
     if (prov) body.proveedor_nombre = prov;
   }
   if (p.pay !== undefined && p.pay !== cur.pay && MEDIO[p.pay]) body.medio_pago = MEDIO[p.pay];
+  if (p.tipoCambio !== undefined && p.tipoCambio !== cur.tipoCambio) body.tipo_cambio = p.tipoCambio;
   const hasBody = Object.keys(body).length > 0;
 
   if (cur.st === 'dup' && p.st === 'ok') return hasBody ? { kind: 'descartarDuplicado', body } : { kind: 'descartarDuplicado' };

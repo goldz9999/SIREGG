@@ -185,17 +185,22 @@ export default function Layout() {
             {navGroups(SETTINGS_GROUPS)}
           </nav>
         ) : (
-          <>
-            <nav key="main" className="stack" style={{ gap: 'var(--space-4)' }}>{navGroups(NAV_GROUPS)}</nav>
-            <div className="side-foot">
-              <button className="nav-item" style={{ width: '100%' }} onClick={openSettings}>
-                <Icon n="ph-gear-six" style={{ fontSize: 18 }} />
-                <span className="grow">Configuración</span>
-                <Icon n="ph-caret-right" style={{ fontSize: 14, color: 'var(--color-neutral-700)' }} />
-              </button>
-            </div>
-          </>
+          <nav key="main" className="stack" style={{ gap: 'var(--space-4)' }}>{navGroups(NAV_GROUPS)}</nav>
         )}
+
+        <div className="side-foot" style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <button className={'nav-item' + (page === 'soporte' ? ' on' : '')} style={{ width: '100%' }} onClick={() => go('soporte')}>
+            <Icon n="ph-lifebuoy" style={{ fontSize: 18 }} />
+            <span className="grow">Ayuda y soporte</span>
+          </button>
+          {!inSettings && (
+            <button className="nav-item" style={{ width: '100%' }} onClick={openSettings}>
+              <Icon n="ph-gear-six" style={{ fontSize: 18 }} />
+              <span className="grow">Configuración</span>
+              <Icon n="ph-caret-right" style={{ fontSize: 14, color: 'var(--color-neutral-700)' }} />
+            </button>
+          )}
+        </div>
       </aside>
 
       <div className="stack grow minw0">

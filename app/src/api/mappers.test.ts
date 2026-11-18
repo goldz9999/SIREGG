@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { initialsOf, mapCompany, mapGasto, mapMember, mapRole, toRolEmpresa } from './mappers';
-import type { ApiGasto, ApiUsuarioLista } from './types';
+import { initialsOf, mapCompany, mapGanancia, mapGasto, mapIngreso, mapMember, mapRole, toRolEmpresa } from './mappers';
+import type { ApiGasto, ApiIngreso, ApiUsuarioLista } from './types';
 
 const gasto = (over: Partial<ApiGasto> = {}): ApiGasto => ({
   id: 12, pedido_id: null, creado_en: '2026-09-28T14:05:00Z', usuario_id: 1, usuario_nombre: 'Lucía Ramírez', empresa_id: 1, es_personal: false,
@@ -15,10 +15,17 @@ const gasto = (over: Partial<ApiGasto> = {}): ApiGasto => ({
 
 describe('mapGasto', () => {
   it('convierte un gasto completo', () => {
-    const e = mapGasto(gasto());
+    const e = mapGasto(gasto({
+      moneda_original: 'USD',
+      monto_original: '300.00',
+      tipo_cambio: '3.75',
+      tipo_cambio_fecha: '2026-09-28',
+      tipo_cambio_fuente: 'sunat',
+    }));
     expect(e).toMatchObject({
       id: '12', desc: 'Cemento', prov: 'Sodimac', cat: 'Materiales', type: 'Empresarial',
       amt: 1240.5, st: 'ok', user: 'Lucía Ramírez', pay: 'Yape', op: '998877', dupOf: null, proj: '', conf: 'alta', createdAt: '2026-09-28T14:05:00Z', ruc: '20100070970', empresaId: 1,
+      monedaOriginal: 'USD', montoOriginal: 300, tipoCambio: 3.75, tipoCambioFecha: '2026-09-28', tipoCambioFuente: 'sunat',
     });
     expect(e.date.getFullYear()).toBe(2026);
     expect(e.date.getMonth()).toBe(8);
@@ -140,3 +147,77 @@ describe('mapMember', () => {
     expect(mapCompany({ id: 1, nombre: 'Demo', activa: true, logo_url: null }, 'empleado')).toMatchObject({ ruc: '', address: '', currency: 'PEN', logoUrl: null });
   });
 });
+
+describe('mapIngreso y mapGanancia', () => {
+  it('mapIngreso mapea correctamente un ingreso con moneda original y pedido', () => {
+    const apiIng: ApiIngreso = {
+      id: 5,
+      empresa_id: 1,
+      fecha: '2026-11-10',
+      descripcion: 'Pago de cliente Proyecto Alpha',
+      cliente: 'Empresa Cliente SAC',
+      monto: '15000.50',
+      moneda_original: 'USD',
+      monto_original: '4000.00',
+      tipo_cambio: '3.75',
+      medio_pago: 'transferencia',
+      numero_operacion: 'TR-102938',
+      pedido_id: 2,
+      pedidos: { nombre: 'Proyecto Alpha' },
+      usuario_id: 6,
+      usuario_nombre: 'Joel',
+      canal: 'web',
+      evidencia_url: 'https://x/voucher.png',
+      creado_en: '2026-11-10T12:00:00Z',
+    };
+    const res = mapIngreso(apiIng);
+    expect(res).toMatchObject({
+      id: '5',
+      desc: 'Pago de cliente Proyecto Alpha',
+      cliente: 'Empresa Cliente SAC',
+      amt: 15000.5,
+      monedaOriginal: 'USD',
+      montoOriginal: 4000,
+      tipoCambio: 3.75,
+      pay: 'Transferencia',
+      op: 'TR-102938',
+      proj: 'Proyecto Alpha',
+      pedidoId: 2,
+      user: 'Joel',
+      channel: 'Web',
+      evidenciaUrl: 'https://x/voucher.png',
+      empresaId: 1,
+    });
+    expect(res.date.getFullYear()).toBe(2026);
+    expect(res.date.getMonth()).toBe(10); // Noviembre (0-indexed: 10)
+    expect(res.date.getDate()).toBe(10);
+  });
+
+  it('mapGanancia mapea cálculos de totales y desglose', () => {
+    const res = mapGanancia({
+      periodo: '2026-11',
+      total_ingresos: '20000',
+      total_gastos: '12000',
+      ganancia: '8000',
+      margen: '40',
+      ultimo_ingreso_fecha: '2026-11-10',
+      desglose_pedidos: [
+        { pedido_id: 1, nombre: 'P1', ingresos: '10000', gastos: '6000', ganancia: '4000' },
+      ],
+      cerrado: false,
+    });
+    expect(res).toEqual({
+      periodo: '2026-11',
+      totalIngresos: 20000,
+      totalGastos: 12000,
+      ganancia: 8000,
+      margen: 40,
+      ultimoIngresoFecha: '2026-11-10',
+      desglosePedidos: [
+        { pedidoId: 1, nombre: 'P1', ingresos: 10000, gastos: 6000, ganancia: 4000 },
+      ],
+      cerrado: false,
+    });
+  });
+});
+

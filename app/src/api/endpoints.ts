@@ -1,6 +1,6 @@
 import { api } from './client';
 import type { PatchBody } from './sync';
-import type { ApiCategoria, ApiConteos, ApiEmpresa, ApiEstadoBot, ApiTelegramUsuario, ApiGasto, ApiLogin, ApiPedido, ApiPerfil, ApiProveedor, ApiResumen, ApiUsuario, ApiUsuarioLista, EstadoPedido, Moneda, RolEmpresa } from './types';
+import type { ApiCategoria, ApiConteos, ApiEmpresa, ApiEstadoBot, ApiGanancia, ApiTelegramUsuario, ApiGasto, ApiIngreso, ApiLogin, ApiPedido, ApiPerfil, ApiProveedor, ApiResumen, ApiTicket, ApiUsuario, ApiUsuarioLista, EstadoPedido, Moneda, NuevoIngreso, NuevoTicket, RolEmpresa } from './types';
 
 export const login = (email: string, password: string) =>
   api<ApiLogin>('/auth/login', { method: 'POST', body: { email, password } });
@@ -102,3 +102,52 @@ export const quitarTelegram = (id: number, empresaId: number) =>
   api<unknown>('/telegram/usuarios/' + id, { method: 'DELETE', query: { empresa_id: empresaId } });
 export const crearTelegram = (empresaId: number, nombre: string, telegramId: number) =>
   api<{ id: number }>('/telegram/usuarios', { method: 'POST', body: { nombre, telegram_id: telegramId }, query: { empresa_id: empresaId } });
+
+// ── Ingresos y ganancia ──
+export const listIngresos = (empresaId: number, query?: { desde?: string; hasta?: string; pedido_id?: number }) =>
+  api<ApiIngreso[]>('/ingresos', { query: { empresa_id: empresaId, ...query } });
+export const listIngresosPersonales = (query?: { desde?: string; hasta?: string }) =>
+  api<ApiIngreso[]>('/ingresos', { query: { ambito: 'personal', ...query } });
+export const crearIngreso = (empresaId: number, body: NuevoIngreso) =>
+  api<ApiIngreso>('/ingresos', { method: 'POST', body, query: { empresa_id: empresaId } });
+export const crearIngresoPersonal = (body: NuevoIngreso) =>
+  api<ApiIngreso>('/ingresos', { method: 'POST', body, query: { ambito: 'personal' } });
+export const patchIngreso = (id: number, empresaId: number, body: Partial<NuevoIngreso>) =>
+  api<ApiIngreso>('/ingresos/' + id, { method: 'PATCH', body, query: { empresa_id: empresaId } });
+export const eliminarIngreso = (id: number, empresaId: number) =>
+  api<unknown>('/ingresos/' + id, { method: 'DELETE', query: { empresa_id: empresaId } });
+export const eliminarIngresoPersonal = (id: number) =>
+  api<unknown>('/ingresos/' + id, { method: 'DELETE', query: { ambito: 'personal' } });
+export const getGanancia = (empresaId: number, periodo?: string) =>
+  api<ApiGanancia>('/ingresos/ganancia', { query: { empresa_id: empresaId, ...(periodo ? { periodo } : {}) } });
+
+// ── Soporte y tickets ──
+export const listTickets = () => api<ApiTicket[]>('/soporte/tickets');
+export const crearTicket = (body: NuevoTicket) =>
+  api<ApiTicket>('/soporte/tickets', { method: 'POST', body });
+
+// ── Prioridad de productos e ítems ──
+export const actualizarPrioridadItem = (
+  gastoId: number,
+  itemId: number,
+  prioridad: 'prioritario' | 'adicional' | null,
+  empresaId?: number
+) =>
+  api<unknown>(`/gastos/${gastoId}/items/${itemId}`, {
+    method: 'PATCH',
+    body: { prioridad },
+    query: { empresa_id: empresaId },
+  });
+
+export const actualizarPrioridadGasto = (
+  gastoId: number,
+  prioridad: 'prioritario' | 'adicional' | null,
+  empresaId?: number
+) =>
+  api<unknown>(`/gastos/${gastoId}`, {
+    method: 'PATCH',
+    body: { prioridad },
+    query: { empresa_id: empresaId },
+  });
+
+

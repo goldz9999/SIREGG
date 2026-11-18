@@ -1,12 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import * as endpoints from '../api/endpoints';
-import { mapGasto, PERSONAL, PERSONAL_ID } from '../api/mappers';
+import { mapGanancia, mapGasto, mapIngreso, PERSONAL, PERSONAL_ID } from '../api/mappers';
 import { planSync } from '../api/sync';
 import { escucharGastos } from '../api/realtime';
-import type { ApiCategoria, ApiConteos, ApiPedido, ApiProveedor, ApiResumen } from '../api/types';
+import type { ApiCategoria, ApiConteos, ApiGanancia, ApiIngreso, ApiPedido, ApiProveedor, ApiResumen, NuevoIngreso } from '../api/types';
 import { isPending } from '../data/expenses';
 import { PERMS } from '../data/org';
-import type { Company, Expense, PageId } from '../data/types';
+import type { Company, Expense, Ganancia, Ingreso, PageId } from '../data/types';
 import { setCurrency } from '../lib/format';
 import { useAuth, type SessionUser } from './Auth';
 
@@ -38,6 +38,13 @@ interface AppState {
   categories: ApiCategoria[];
   pedidos: ApiPedido[];
   proveedores: ApiProveedor[];
+  ingresos: Ingreso[];
+  ganancia: Ganancia | null;
+  canSeeFinances: boolean;
+  personalCurrency: 'PEN' | 'USD';
+  setPersonalCurrency: (c: 'PEN' | 'USD') => void;
+  crearIngreso: (body: NuevoIngreso) => Promise<void>;
+  deleteIngreso: (id: string) => Promise<void>;
   patchExpense: (id: string, p: Partial<Expense>) => void;
   deleteExpense: (id: string) => void;
   /** Vuelve a pedir los datos de la empresa activa, sin mostrar el estado de carga. */
@@ -52,7 +59,7 @@ interface AppState {
 const Ctx = createContext<AppState | null>(null);
 const STORE_KEY = 'siregg-ui';
 
-function readStored(): { theme?: ThemePref; coId?: string; page?: PageId } {
+function readStored(): { theme?: ThemePref; coId?: string; page?: PageId; personalCurrency?: 'PEN' | 'USD' } {
   try {
     return JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
   } catch {
@@ -71,8 +78,10 @@ export function aplicarTemaInicial() {
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const auth = useAuth();
   const user = auth.user!;
-  const companies = useMemo(() => (user.canPersonal ? [...auth.companies, PERSONAL] : auth.companies), [auth.companies, user.canPersonal]);
   const stored = useRef(readStored()).current;
+  const [personalCurrency, setPersonalCurrencyState] = useState<'PEN' | 'USD'>(stored.personalCurrency || 'PEN');
+  const personalCo = useMemo(() => ({ ...PERSONAL, currency: personalCurrency }), [personalCurrency]);
+  const companies = useMemo(() => (user.canPersonal ? [...auth.companies, personalCo] : auth.companies), [auth.companies, personalCo, user.canPersonal]);
   const [theme, setThemeState] = useState<ThemePref>(stored.theme || 'light');
   const [sysDark, setSysDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
   const [coId, setCoId] = useState(() => {
@@ -93,6 +102,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [categories, setCategories] = useState<ApiCategoria[]>([]);
   const [pedidos, setPedidos] = useState<ApiPedido[]>([]);
   const [proveedores, setProveedores] = useState<ApiProveedor[]>([]);
+  const [ingresos, setIngresos] = useState<Ingreso[]>([]);
+  const [gananciaBackend, setGananciaBackend] = useState<Ganancia | null>(null);
   const [reloadTick, setReloadTick] = useState(0);
   const silentRef = useRef(false);
   const toastTimer = useRef<number>();
@@ -113,11 +124,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORE_KEY, JSON.stringify({ theme, coId, page: lastPage }));
+      localStorage.setItem(STORE_KEY, JSON.stringify({ theme, coId, page: lastPage, personalCurrency }));
     } catch {
       /* storage unavailable: preferences just won't persist */
     }
-  }, [theme, coId, lastPage]);
+  }, [theme, coId, lastPage, personalCurrency]);
 
   useEffect(() => () => clearTimeout(toastTimer.current), []);
 
@@ -132,6 +143,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   // En "Gastos personales" se piden mis gastos personales de todas mis empresas y las
   // categorías de cada una (el detalle del gasto ofrece las de la empresa del gasto).
   const empresaIds = useMemo(() => auth.companies.map((c) => Number(c.id)), [auth.companies]);
+  const base = companies.find((c) => c.id === coId) ?? companies[0];
+  const canSeeFinances = coId === PERSONAL_ID || ['Propietario', 'Administrador', 'Contador'].includes(base.role);
+
   useEffect(() => {
     let alive = true;
     const empresaId = Number(coId);
@@ -143,14 +157,18 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         Promise.all(empresaIds.map((id) => endpoints.categorias(id))).then((l) => l.flat()),
         Promise.resolve([] as ApiPedido[]), Promise.resolve([] as ApiProveedor[]),
         endpoints.listDuplicadosPersonales().catch(() => []),
+        endpoints.listIngresosPersonales().catch(() => [] as ApiIngreso[]),
+        Promise.resolve(null as ApiGanancia | null),
       ] as const)
       : Promise.all([
         endpoints.listGastos(empresaId), endpoints.conteos(empresaId), endpoints.resumen(empresaId),
         endpoints.categorias(empresaId), endpoints.listPedidos(empresaId), endpoints.listProveedores(empresaId),
         endpoints.listDuplicados(empresaId).catch(() => []),
+        canSeeFinances ? endpoints.listIngresos(empresaId).catch(() => [] as ApiIngreso[]) : Promise.resolve([] as ApiIngreso[]),
+        canSeeFinances ? endpoints.getGanancia(empresaId).catch(() => null as ApiGanancia | null) : Promise.resolve(null as ApiGanancia | null),
       ] as const);
     load
-      .then(([g, c, r, cats, peds, provs, dups]) => {
+      .then(([g, c, r, cats, peds, provs, dups, ings, gan]) => {
         if (!alive) return;
         setGastos(g.map(mapGasto));
         setDupsBase(dups.map(mapGasto));
@@ -159,16 +177,19 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         setCategories(cats);
         setPedidos(peds);
         setProveedores(provs);
+        setIngresos(ings.map(mapIngreso));
+        setGananciaBackend(gan ? mapGanancia(gan) : null);
         setOverlay({});
       })
       .catch((e) => {
         if (!alive) return;
         setGastos([]); setDupsBase([]); setCounts(null); setResumen(null); setCategories([]); setPedidos([]); setProveedores([]);
+        setIngresos([]); setGananciaBackend(null);
         showToast(e instanceof Error ? e.message : 'No se pudieron cargar los datos.', 'ph-warning-circle');
       })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, [coId, empresaIds, reloadTick, showToast]);
+  }, [coId, empresaIds, reloadTick, canSeeFinances, showToast]);
 
   const reload = useCallback(() => { silentRef.current = true; setReloadTick((t) => t + 1); }, []);
 
@@ -184,7 +205,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       window.clearTimeout(timer);
       timer = window.setTimeout(() => {
         reload();
-        if (c.tipo === 'creado') showToast('Llegó un gasto nuevo.', 'ph-receipt');
+        if (c.tipo === 'creado') {
+          if (c.entidad === 'ingreso') showToast('Llegó un nuevo ingreso.', 'ph-trend-up');
+          else showToast('Llegó un gasto nuevo.', 'ph-receipt');
+        }
       }, 600);
     });
     // Respaldo si el socket no conecta (proxy, red): al volver a la pestaña se refresca.
@@ -195,7 +219,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     return () => { window.clearTimeout(timer); stop(); document.removeEventListener('visibilitychange', onVisible); };
   }, [coId, empresaIds, reload, showToast]);
 
-  const base = companies.find((c) => c.id === coId) ?? companies[0];
   const co = useMemo<Company>(() => ({ ...base, review: counts?.requiereRevision ?? 0 }), [base, counts]);
   const personal = co.id === PERSONAL_ID;
   // Bot de Telegram: por rol (propietario) o por permiso que dio el propietario.
@@ -214,6 +237,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setCoId(id);
     setLastPage(target);
     setGastos([]); setDupsBase([]); setCounts(null); setResumen(null); setCategories([]); setPedidos([]); setProveedores([]);
+    setIngresos([]); setGananciaBackend(null);
     if (id !== PERSONAL_ID) endpoints.setEmpresaActiva(Number(id)).catch(() => { /* solo recuerda la preferencia */ });
     showToast('Ahora en ' + next.name, 'ph-arrows-left-right');
     return target;
@@ -278,9 +302,59 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       });
   }, [coId, reload, showToast]);
 
+  const ganancia = useMemo<Ganancia | null>(() => {
+    if (!canSeeFinances) return null;
+    if (gananciaBackend) return gananciaBackend;
+    const totalIngresos = ingresos.reduce((s, i) => s + i.amt, 0);
+    const totalGastos = expenses
+      .filter((e) => (coId === PERSONAL_ID ? true : e.type === 'Empresarial') && e.st !== 'desc')
+      .reduce((s, e) => s + e.amt, 0);
+    const diff = totalIngresos - totalGastos;
+    const margen = totalIngresos > 0 ? (diff / totalIngresos) * 100 : 0;
+    const ultimoIngresoFecha = ingresos.length > 0
+      ? ingresos.reduce((max, i) => (i.date > max ? i.date : max), ingresos[0].date).toISOString().slice(0, 10)
+      : null;
+    return {
+      periodo: new Date().toISOString().slice(0, 7),
+      totalIngresos,
+      totalGastos,
+      ganancia: diff,
+      margen: Math.round(margen * 10) / 10,
+      ultimoIngresoFecha,
+      desglosePedidos: [],
+      cerrado: false,
+    };
+  }, [canSeeFinances, gananciaBackend, ingresos, expenses, coId]);
+
+  const handleCrearIngreso = useCallback(async (body: NuevoIngreso) => {
+    if (coId === PERSONAL_ID) {
+      await endpoints.crearIngresoPersonal(body);
+    } else {
+      const empresaId = Number(coId);
+      if (!Number.isInteger(empresaId)) return;
+      await endpoints.crearIngreso(empresaId, body);
+    }
+    reload();
+    showToast('Ingreso registrado.', 'ph-check');
+  }, [coId, reload, showToast]);
+
+  const handleDeleteIngreso = useCallback(async (id: string) => {
+    if (coId === PERSONAL_ID) {
+      await endpoints.eliminarIngresoPersonal(Number(id));
+    } else {
+      const empresaId = Number(coId);
+      if (!Number.isInteger(empresaId)) return;
+      await endpoints.eliminarIngreso(Number(id), empresaId);
+    }
+    reload();
+    showToast('Ingreso eliminado.', 'ph-trash');
+  }, [coId, reload, showToast]);
+
   const value: AppState = {
     theme, dark, setTheme: setThemeState, user, logout: auth.logout, companies, co, personal, allowed, loading, switchCompany,
     expenses, duplicados, pendingCount, resumen, counts, categories, pedidos, proveedores, patchExpense, deleteExpense, reload,
+    ingresos, ganancia, canSeeFinances, personalCurrency, setPersonalCurrency: setPersonalCurrencyState,
+    crearIngreso: handleCrearIngreso, deleteIngreso: handleDeleteIngreso,
     toast, showToast, hideToast: () => setToast(null),
     lastPage, rememberPage: setLastPage,
   };

@@ -1,8 +1,8 @@
 export type Role = 'Propietario' | 'Administrador' | 'Contador' | 'Supervisor' | 'Empleado' | 'Titular';
 
 export type PageId =
-  | 'dashboard' | 'revision' | 'gastos' | 'comprobantes' | 'proveedores' | 'proyectos'
-  | 'categorias' | 'reportes' | 'usuarios' | 'empresa' | 'personal' | 'telegram';
+  | 'dashboard' | 'revision' | 'gastos' | 'ingresos' | 'comprobantes' | 'proveedores' | 'proyectos'
+  | 'categorias' | 'reportes' | 'usuarios' | 'empresa' | 'personal' | 'telegram' | 'soporte';
 
 export interface Company {
   id: string;
@@ -34,6 +34,22 @@ export interface Evidence {
   huella?: string | null;
 }
 
+export interface ExpenseItem {
+  id?: number;
+  producto: string;
+  cantidad?: number | null;
+  costo?: number | null;
+  prioridad?: 'prioritario' | 'adicional' | null;
+}
+
+export interface ExpensePayment {
+  id?: number;
+  medio: string;
+  numeroOperacion?: string | null;
+  monto?: number | null;
+  fecha?: string | null;
+}
+
 export interface Expense {
   id: string;
   date: Date;
@@ -45,6 +61,16 @@ export interface Expense {
   proj: string;
   pay: string;
   amt: number;
+  /** Moneda original del comprobante (si requirió conversión cambiaria). */
+  monedaOriginal?: string | null;
+  /** Monto en la moneda original antes de convertir. */
+  montoOriginal?: number | null;
+  /** Tipo de cambio aplicado para la conversión. */
+  tipoCambio?: number | null;
+  /** Fecha de la tasa de cambio aplicada. */
+  tipoCambioFecha?: string | null;
+  /** Fuente de la tasa (p. ej. 'sunat' o 'manual'). */
+  tipoCambioFuente?: string | null;
   st: Status;
   user: string;
   channel: string;
@@ -59,6 +85,13 @@ export interface Expense {
   empresaId?: number | null;
   /** Usuario que registró el gasto. */
   userId?: number | null;
+  items?: ExpenseItem[];
+  payments?: ExpensePayment[];
+  prioridad?: 'prioritario' | 'adicional' | null;
+  subtotal?: number | null;
+  igv?: number | null;
+  comprobanteNumero?: string | null;
+  comprobanteTipo?: string | null;
 }
 
 export interface Member {
@@ -84,3 +117,43 @@ export interface Notification {
   text: string;
   time: string;
 }
+
+export interface Ingreso {
+  id: string;
+  date: Date;
+  desc: string;
+  cliente: string;
+  amt: number;
+  monedaOriginal?: string | null;
+  montoOriginal?: number | null;
+  tipoCambio?: number | null;
+  pay: string;
+  op: string;
+  proj: string;
+  pedidoId?: number | null;
+  user: string;
+  channel: string;
+  evidenciaUrl?: string | null;
+  createdAt?: string;
+  empresaId?: number | null;
+}
+
+export interface DesglosePedidoGanancia {
+  pedidoId: number;
+  nombre: string;
+  ingresos: number;
+  gastos: number;
+  ganancia: number;
+}
+
+export interface Ganancia {
+  periodo: string; // YYYY-MM
+  totalIngresos: number;
+  totalGastos: number;
+  ganancia: number;
+  margen: number; // Porcentaje de margen (ej: 42.5%)
+  ultimoIngresoFecha?: string | null;
+  desglosePedidos: DesglosePedidoGanancia[];
+  cerrado?: boolean;
+}
+

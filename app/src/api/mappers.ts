@@ -1,5 +1,5 @@
-import type { Company, Evidence, Expense, Member, Role, Status } from '../data/types';
-import type { ApiEmpresa, ApiGasto, ApiUsuarioLista, RolEmpresa } from './types';
+import type { Company, Evidence, Expense, ExpenseItem, ExpensePayment, Ganancia, Ingreso, Member, Role, Status } from '../data/types';
+import type { ApiEmpresa, ApiGanancia, ApiGasto, ApiIngreso, ApiUsuarioLista, RolEmpresa } from './types';
 
 const ROLE: Record<RolEmpresa, Role> = {
   propietario: 'Propietario', administrador: 'Administrador', supervisor: 'Supervisor', contador: 'Contador', empleado: 'Empleado',
@@ -88,6 +88,23 @@ function channelOf(g: ApiGasto): string {
 
 export function mapGasto(g: ApiGasto): Expense {
   const pago = g.pagos?.[0];
+  const comprobante = g.comprobantes?.[0];
+  const rawItems = comprobante?.items ?? comprobante?.comprobante_items ?? g.gasto_items ?? [];
+  const items: ExpenseItem[] = rawItems.map((it) => ({
+    id: it.id,
+    producto: it.producto,
+    cantidad: it.cantidad != null ? Number(it.cantidad) : null,
+    costo: it.costo != null ? Number(it.costo) : null,
+    prioridad: it.prioridad ?? null,
+  }));
+  const payments: ExpensePayment[] = (g.pagos ?? []).map((p) => ({
+    id: p.id,
+    medio: PAY[p.medio] ?? p.medio,
+    numeroOperacion: p.numero_operacion ?? null,
+    monto: p.monto != null ? Number(p.monto) : null,
+    fecha: p.fecha ?? (p.creado_en ? p.creado_en.slice(0, 10) : null),
+  }));
+
   return {
     id: String(g.id),
     date: parseDate(g.fecha),
@@ -99,6 +116,11 @@ export function mapGasto(g: ApiGasto): Expense {
     proj: g.pedidos?.nombre ?? '',
     pay: pago ? PAY[pago.medio] ?? pago.medio : '',
     amt: Number(g.monto) || 0,
+    monedaOriginal: g.moneda_original ?? null,
+    montoOriginal: g.monto_original != null ? Number(g.monto_original) : null,
+    tipoCambio: g.tipo_cambio != null ? Number(g.tipo_cambio) : null,
+    tipoCambioFecha: g.tipo_cambio_fecha ?? null,
+    tipoCambioFuente: g.tipo_cambio_fuente ?? null,
     st: statusOf(g),
     user: g.usuario_nombre ?? '',
     channel: channelOf(g),
@@ -109,6 +131,13 @@ export function mapGasto(g: ApiGasto): Expense {
     createdAt: g.creado_en,
     empresaId: g.empresa_id,
     userId: g.usuario_id,
+    subtotal: comprobante?.subtotal != null ? Number(comprobante.subtotal) : null,
+    igv: comprobante?.igv != null ? Number(comprobante.igv) : null,
+    comprobanteNumero: comprobante?.numero ?? null,
+    comprobanteTipo: comprobante?.tipo ?? null,
+    prioridad: g.prioridad ?? null,
+    items,
+    payments,
   };
 }
 
@@ -129,3 +158,45 @@ export function mapMember(u: ApiUsuarioLista, empresaId: number, meId: number): 
     empresaIds: u.empresas.map((e) => e.empresa_id),
   };
 }
+
+export function mapIngreso(i: ApiIngreso): Ingreso {
+  return {
+    id: String(i.id),
+    date: parseDate(i.fecha),
+    desc: i.descripcion ?? '',
+    cliente: i.cliente ?? '',
+    amt: Number(i.monto) || 0,
+    monedaOriginal: i.moneda_original ?? null,
+    montoOriginal: i.monto_original != null ? Number(i.monto_original) : null,
+    tipoCambio: i.tipo_cambio != null ? Number(i.tipo_cambio) : null,
+    pay: i.medio_pago ? PAY[i.medio_pago] ?? i.medio_pago : '',
+    op: i.numero_operacion ?? '',
+    proj: i.pedidos?.nombre ?? '',
+    pedidoId: i.pedido_id ?? null,
+    user: i.usuario_nombre ?? '',
+    channel: i.canal === 'telegram' ? 'Telegram' : i.canal === 'web' ? 'Web' : '—',
+    evidenciaUrl: i.evidencia_url ?? null,
+    createdAt: i.creado_en,
+    empresaId: i.empresa_id,
+  };
+}
+
+export function mapGanancia(g: ApiGanancia): Ganancia {
+  return {
+    periodo: g.periodo ?? '',
+    totalIngresos: Number(g.total_ingresos) || 0,
+    totalGastos: Number(g.total_gastos) || 0,
+    ganancia: Number(g.ganancia) || 0,
+    margen: Number(g.margen) || 0,
+    ultimoIngresoFecha: g.ultimo_ingreso_fecha ?? null,
+    desglosePedidos: (g.desglose_pedidos ?? []).map((p) => ({
+      pedidoId: p.pedido_id,
+      nombre: p.nombre,
+      ingresos: Number(p.ingresos) || 0,
+      gastos: Number(p.gastos) || 0,
+      ganancia: Number(p.ganancia) || 0,
+    })),
+    cerrado: Boolean(g.cerrado),
+  };
+}
+

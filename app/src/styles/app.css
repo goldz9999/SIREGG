@@ -186,3 +186,50 @@
   .dup-img img, .dup-vacio { height: 160px; }
   .dup-img-pago img, .dup-vacio-pago { height: 150px; }
 }
+
+/* — Impresión de boleta virtual — */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #111827 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .side,
+  .topbar,
+  .page-header,
+  .boleta-actions,
+  .toast,
+  button {
+    display: none !important;
+  }
+  .shell {
+    display: block !important;
+    min-height: auto !important;
+    background: none !important;
+  }
+  .content {
+    margin: 0 !important;
+    width: 100% !important;
+  }
+  .main {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+  }
+  .boleta-container {
+    box-shadow: none !important;
+    border: 1px solid #d1d5db !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+    padding: 24px !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 0 !important;
+  }
+  .boleta-container * {
+    color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+}

@@ -55,6 +55,44 @@ export interface ApiEmpresa {
 }
 export interface ApiCategoria { id: number; nombre: string; empresa_id: number }
 
+export interface ApiComprobanteItem {
+  id?: number;
+  producto: string;
+  cantidad?: number | string | null;
+  costo?: number | string | null;
+  prioridad?: 'prioritario' | 'adicional' | null;
+}
+
+export interface ApiComprobante {
+  id: number;
+  numero: string | null;
+  tipo: string;
+  subtotal?: number | string | null;
+  igv?: number | string | null;
+  total?: number | string | null;
+  moneda?: string | null;
+  creado_en?: string;
+  items?: ApiComprobanteItem[];
+  comprobante_items?: ApiComprobanteItem[];
+}
+
+export interface ApiPago {
+  id: number;
+  medio: string;
+  numero_operacion: string | null;
+  monto?: number | string | null;
+  fecha?: string | null;
+  creado_en?: string;
+}
+
+export interface ApiGastoItem {
+  id?: number;
+  producto: string;
+  cantidad?: number | string | null;
+  costo?: number | string | null;
+  prioridad?: 'prioritario' | 'adicional' | null;
+}
+
 export interface ApiGasto {
   id: number;
   usuario_id: number | null;
@@ -63,6 +101,12 @@ export interface ApiGasto {
   es_personal: boolean;
   descripcion: string | null;
   monto: number | string; // PostgREST devuelve numeric como número o string
+  moneda_original?: string | null;
+  monto_original?: number | string | null;
+  tipo_cambio?: number | string | null;
+  tipo_cambio_fecha?: string | null;
+  tipo_cambio_fuente?: string | null;
+  prioridad?: 'prioritario' | 'adicional' | null;
   fecha: string; // YYYY-MM-DD
   confianza: string | null;
   pendiente_revision: boolean;
@@ -72,8 +116,9 @@ export interface ApiGasto {
   categorias: { nombre: string } | null;
   proveedores: { nombre: string; ruc?: string | null } | null;
   pedidos: { nombre: string } | null;
-  comprobantes: { id: number; numero: string | null; tipo: string; creado_en?: string }[];
-  pagos: { id: number; medio: string; numero_operacion: string | null; creado_en?: string }[];
+  comprobantes: ApiComprobante[];
+  pagos: ApiPago[];
+  gasto_items?: ApiGastoItem[];
   evidencias: { id: number; tipo: string; origen: string; storage_path: string; url?: string | null; creado_en?: string; huella?: string | null }[];
 }
 
@@ -83,6 +128,9 @@ export interface ApiResumen {
   month: number;
   company: number;
   personal: number;
+  prioritario?: number;
+  adicional?: number;
+  sin_clasificar?: number;
   topCategorias: { id: number; nombre: string; cantidad: number }[];
   topProveedores: { id: number; nombre: string; cantidad: number }[];
   recientes: ApiGasto[];
@@ -134,3 +182,86 @@ export interface ApiProveedor {
   ultimo_uso: string | null;
   categoria_sugerida_nombre: string | null;
 }
+
+export interface ApiIngreso {
+  id: number;
+  empresa_id: number;
+  fecha: string;
+  descripcion: string;
+  cliente: string | null;
+  monto: number | string;
+  moneda_original?: string | null;
+  monto_original?: number | string | null;
+  tipo_cambio?: number | string | null;
+  medio_pago?: string | null;
+  numero_operacion?: string | null;
+  pedido_id?: number | null;
+  pedidos?: { nombre: string } | null;
+  usuario_id?: number | null;
+  usuario_nombre?: string | null;
+  canal?: string | null;
+  evidencia_url?: string | null;
+  creado_en: string;
+}
+
+export interface ApiGananciaDesglose {
+  pedido_id: number;
+  nombre: string;
+  ingresos: number | string;
+  gastos: number | string;
+  ganancia: number | string;
+}
+
+export interface ApiGanancia {
+  periodo?: string;
+  total_ingresos: number | string;
+  total_gastos: number | string;
+  ganancia: number | string;
+  margen: number | string;
+  ultimo_ingreso_fecha?: string | null;
+  desglose_pedidos?: ApiGananciaDesglose[];
+  cerrado?: boolean;
+}
+
+export interface NuevoIngreso {
+  fecha: string;
+  descripcion: string;
+  monto: number;
+  cliente?: string;
+  moneda_original?: string;
+  monto_original?: number;
+  tipo_cambio?: number;
+  medio_pago?: string;
+  numero_operacion?: string;
+  pedido_id?: number;
+}
+
+// ── Soporte y Tickets ──
+export type TipoTicket = 'error' | 'duda' | 'sugerencia';
+export type EstadoTicket = 'abierto' | 'en_proceso' | 'resuelto';
+
+export interface ApiTicket {
+  id: number;
+  empresa_id: number | null;
+  usuario_id: number;
+  usuario_nombre?: string | null;
+  asunto: string;
+  tipo: TipoTicket;
+  descripcion: string;
+  pagina?: string | null;
+  adjunto_path?: string | null;
+  adjunto_url?: string | null;
+  estado: EstadoTicket;
+  respuesta?: string | null;
+  creado_en: string;
+  actualizado_en?: string;
+}
+
+export interface NuevoTicket {
+  asunto: string;
+  tipo: TipoTicket;
+  descripcion: string;
+  pagina?: string;
+  empresa_id?: number;
+}
+

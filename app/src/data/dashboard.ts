@@ -2,6 +2,7 @@ import { mapGasto } from '../api/mappers';
 import type { ApiResumen } from '../api/types';
 import { curve, fd, money, MONTHS } from '../lib/format';
 import type { Company, Expense } from './types';
+import { getExpenseItems } from './items';
 
 type ReviewKind = 'dup' | 'info' | 'pend' | 'proc' | 'err';
 
@@ -93,6 +94,46 @@ export function buildDashboard(_co: Company, resumen: ApiResumen | null, expense
   const split = r.company + r.personal;
   const biz = split ? Math.round((r.company / split) * 100) : 100;
 
+  // Prioridad de productos del mes en curso (Prioritario vs Adicional)
+  let prioAmt = 0;
+  let adicAmt = 0;
+  let sinPrioAmt = 0;
+
+  for (const e of expenses) {
+    if (e.st === 'desc' || e.date.getFullYear() !== year || e.date.getMonth() !== mIdx) continue;
+    const items = getExpenseItems(e);
+    let classifiedInExpense = false;
+    for (const it of items) {
+      const costo = (it.costo ?? (e.amt / (items.length || 1))) * (it.cantidad || 1);
+      if (it.prioridad === 'prioritario') {
+        prioAmt += costo;
+        classifiedInExpense = true;
+      } else if (it.prioridad === 'adicional') {
+        adicAmt += costo;
+        classifiedInExpense = true;
+      }
+    }
+    if (!classifiedInExpense) {
+      if (e.prioridad === 'prioritario') {
+        prioAmt += e.amt;
+      } else if (e.prioridad === 'adicional') {
+        adicAmt += e.amt;
+      } else {
+        sinPrioAmt += e.amt;
+      }
+    }
+  }
+
+  if (r.prioritario != null && r.adicional != null) {
+    prioAmt = r.prioritario;
+    adicAmt = r.adicional;
+    if (r.sin_clasificar != null) sinPrioAmt = r.sin_clasificar;
+  }
+
+  const clasificadoTotal = prioAmt + adicAmt;
+  const prioPct = clasificadoTotal > 0 ? Math.round((prioAmt / clasificadoTotal) * 100) : 0;
+  const adicPct = clasificadoTotal > 0 ? 100 - prioPct : 0;
+
   const xIdx = [0, 1, 2, 3].map((i) => Math.round((i * 13) / 4));
   const xLabels = xIdx
     .map((idx, i) => (i === 0 ? dayNum(days[idx].fecha) + ' ' + MONTHS[monthIdx(days[idx].fecha)].toUpperCase() : String(dayNum(days[idx].fecha))))
@@ -110,6 +151,12 @@ export function buildDashboard(_co: Company, resumen: ApiResumen | null, expense
     vals, pts, line, area: line + ' L' + CHART_W + ' ' + CHART_H + ' L0 ' + CHART_H + ' Z',
     xLabels,
     cats, bizPct: biz + '%', perPct: 100 - biz + '%',
+    prioAmt,
+    adicAmt,
+    sinPrioAmt,
+    prioPct: prioPct + '%',
+    adicPct: adicPct + '%',
+    hasPrioClassification: clasificadoTotal > 0,
     review: expenses.filter((e) => e.st === 'dup' || e.st === 'pend').slice(0, 4).map((e) => {
       const kind: ReviewKind = e.st === 'dup' ? 'dup' : 'pend';
       const [tone, status] = REVIEW_KIND[kind];

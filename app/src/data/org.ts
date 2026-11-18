@@ -4,6 +4,7 @@ export const PAGES: Record<PageId, { label: string; icon: string }> = {
   dashboard: { label: 'Dashboard', icon: 'ph-squares-four' },
   revision: { label: 'Revisión IA', icon: 'ph-sparkle' },
   gastos: { label: 'Gastos', icon: 'ph-receipt' },
+  ingresos: { label: 'Ingresos', icon: 'ph-trend-up' },
   comprobantes: { label: 'Comprobantes y evidencias', icon: 'ph-files' },
   proveedores: { label: 'Proveedores', icon: 'ph-storefront' },
   proyectos: { label: 'Proyectos y pedidos', icon: 'ph-folders' },
@@ -13,10 +14,11 @@ export const PAGES: Record<PageId, { label: string; icon: string }> = {
   empresa: { label: 'Configuración de empresa', icon: 'ph-buildings' },
   personal: { label: 'Configuración personal', icon: 'ph-user-gear' },
   telegram: { label: 'Bot de Telegram', icon: 'ph-telegram-logo' },
+  soporte: { label: 'Ayuda y soporte', icon: 'ph-lifebuoy' },
 };
 
 export const NAV_GROUPS: { label: string; ids: PageId[] }[] = [
-  { label: 'Principal', ids: ['dashboard', 'revision', 'gastos', 'comprobantes', 'proveedores', 'proyectos', 'categorias', 'reportes'] },
+  { label: 'Principal', ids: ['dashboard', 'revision', 'gastos', 'ingresos', 'comprobantes', 'proveedores', 'proyectos', 'categorias', 'reportes'] },
 ];
 
 /** Segunda barra lateral: se abre desde "Configuración". */
@@ -35,11 +37,11 @@ const ADMIN_PAGES = ALL_PAGES.filter((p) => p !== 'telegram');
 export const PERMS: Record<Role, PageId[]> = {
   Propietario: ALL_PAGES,
   Administrador: ADMIN_PAGES,
-  Contador: ['dashboard', 'revision', 'gastos', 'comprobantes', 'proveedores', 'proyectos', 'categorias', 'reportes', 'personal'],
-  Supervisor: ['dashboard', 'revision', 'gastos', 'comprobantes', 'proveedores', 'proyectos', 'reportes', 'personal'],
-  Empleado: ['dashboard', 'revision', 'gastos', 'comprobantes', 'proyectos', 'personal'],
+  Contador: ['dashboard', 'revision', 'gastos', 'ingresos', 'comprobantes', 'proveedores', 'proyectos', 'categorias', 'reportes', 'personal', 'soporte'],
+  Supervisor: ['dashboard', 'revision', 'gastos', 'comprobantes', 'proveedores', 'proyectos', 'reportes', 'personal', 'soporte'],
+  Empleado: ['dashboard', 'revision', 'gastos', 'comprobantes', 'proyectos', 'personal', 'soporte'],
   // Espacio "Gastos personales": proveedores, categorías y proyectos son catálogos de cada empresa.
-  Titular: ['dashboard', 'revision', 'gastos', 'comprobantes', 'reportes', 'personal'],
+  Titular: ['dashboard', 'revision', 'gastos', 'ingresos', 'comprobantes', 'reportes', 'personal', 'soporte'],
 };
 
 export const ROLES: Role[] = ['Propietario', 'Administrador', 'Supervisor', 'Contador', 'Empleado'];
